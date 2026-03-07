@@ -1,0 +1,37 @@
+# IntelliJ IDEA
+.idea/
+*.iws
+*.iml
+*.ipr
+/out/
+/target/
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+.venv/
+venv/
+ENV/
+build/
+dist/
+*.pt
+*.onnx
+*.engine
+
+# Node.js
+node_modules/
+dist/
+dist-ssr/
+*.local
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Project Specific
+xiaotiao/Flask/runs/
+xiaotiao/Flask/predict/output/
+xiaotiao/SpringBoot/files/
+*.log
+*.err

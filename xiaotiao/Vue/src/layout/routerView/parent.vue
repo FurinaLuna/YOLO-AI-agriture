@@ -1,9 +1,9 @@
 <template>
 	<div class="layout-parent">
-		<router-view v-slot="{ Component }">
+		<router-view v-slot="{ Component, route }">
 			<transition :name="setTransitionName" mode="out-in">
 				<keep-alive :include="getKeepAliveNames">
-					<component :is="Component" :key="state.refreshRouterViewKey" class="w100" v-show="!isIframePage" />
+					<component :is="Component" :key="route.fullPath" class="w100" v-show="!isIframePage" />
 				</keep-alive>
 			</transition>
 		</router-view>
@@ -49,7 +49,7 @@ const getKeepAliveNames = computed(() => {
 });
 // 设置 iframe 显示/隐藏
 const isIframePage = computed(() => {
-	return route.meta.isIframe;
+	return !!route.meta?.isIframe;
 });
 // 获取 iframe 组件列表(未进行渲染)
 const getIframeListRoutes = async () => {
@@ -61,20 +61,24 @@ const getIframeListRoutes = async () => {
 		}
 	});
 };
+// 处理刷新
+const onRefresh = (fullPath: string) => {
+	state.keepAliveNameList = keepAliveNames.value.filter((name: string) => route.name !== name);
+	state.refreshRouterViewKey = '';
+	state.iframeRefreshKey = '';
+	nextTick(() => {
+		state.refreshRouterViewKey = fullPath;
+		state.iframeRefreshKey = fullPath;
+		state.keepAliveNameList = keepAliveNames.value;
+	});
+};
+
 // 页面加载前，处理缓存，页面刷新时路由缓存处理
 onBeforeMount(() => {
 	state.keepAliveNameList = keepAliveNames.value;
-	mittBus.on('onTagsViewRefreshRouterView', (fullPath: string) => {
-		state.keepAliveNameList = keepAliveNames.value.filter((name: string) => route.name !== name);
-		state.refreshRouterViewKey = '';
-		state.iframeRefreshKey = '';
-		nextTick(() => {
-			state.refreshRouterViewKey = fullPath;
-			state.iframeRefreshKey = fullPath;
-			state.keepAliveNameList = keepAliveNames.value;
-		});
-	});
+	mittBus.on('onTagsViewRefreshRouterView', onRefresh);
 });
+
 // 页面加载时
 onMounted(() => {
 	getIframeListRoutes();
@@ -92,7 +96,7 @@ onMounted(() => {
 });
 // 页面卸载时
 onUnmounted(() => {
-	mittBus.off('onTagsViewRefreshRouterView', () => {});
+	mittBus.off('onTagsViewRefreshRouterView', onRefresh);
 });
 // 监听路由变化，防止 tagsView 多标签时，切换动画消失
 // https://toscode.gitee.com/lyt-top/vue-next-admin/pulls/38/files

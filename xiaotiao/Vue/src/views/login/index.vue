@@ -1,32 +1,97 @@
 <template>
-	<div class="login-container">
-		<div class="bg-bubbles">
-			<li v-for="n in 10" :key="n"></li>
+	<div class="min-h-screen w-full flex bg-slate-50 font-sans">
+		<!-- Left Section: Branding & Imagery -->
+		<div class="hidden lg:flex lg:w-1/2 relative bg-emerald-600 overflow-hidden items-center justify-center">
+			<!-- Overlay gradient -->
+			<div class="absolute inset-0 bg-gradient-to-br from-emerald-600/90 to-blue-900/90 z-10 mix-blend-multiply"></div>
+			<!-- Background Image using Unsplash agriculture -->
+			<img src="https://images.unsplash.com/photo-1574943320219-553eb213f72d?q=80&w=2000&auto=format&fit=crop" 
+				 alt="Smart Agriculture" 
+				 class="absolute inset-0 w-full h-full object-cover z-0 opacity-80" />
+			
+			<div class="relative z-20 p-12 text-white flex flex-col justify-center max-w-2xl">
+				<div class="w-16 h-16 bg-white/20 backdrop-blur-md rounded-2xl flex items-center justify-center mb-8 shadow-xl border border-white/30">
+					<i class="iconfontjs icon-zhihui text-3xl text-white"></i>
+				</div>
+				<h1 class="text-4xl md:text-5xl font-bold mb-6 leading-tight">
+					基于YOLO+AI的<br/>
+					<span class="text-emerald-300">一体化智能云平台</span>
+				</h1>
+				<p class="text-lg md:text-xl text-emerald-50 max-w-lg mb-12 opacity-90 leading-relaxed">
+					农作物病虫害检测与环境监测的数字化底座，驱动农业智能化、科学化管理，提升产量与品质。
+				</p>
+				
+				<div class="flex items-center space-x-6 text-sm font-medium">
+					<div class="flex items-center bg-white/10 px-4 py-2 rounded-full backdrop-blur-sm border border-white/10">
+						<i class="iconfontjs icon-znwd mr-2 text-emerald-300"></i> AI 智能分析
+					</div>
+					<div class="flex items-center bg-white/10 px-4 py-2 rounded-full backdrop-blur-sm border border-white/10">
+						<i class="iconfontjs icon-bingchonghai-1haichong mr-2 text-emerald-300"></i> 病害秒级识别
+					</div>
+				</div>
+			</div>
+			
+			<!-- Decorative Circles -->
+			<div class="absolute top-0 right-0 -mr-20 -mt-20 w-80 h-80 rounded-full bg-emerald-400/20 blur-3xl z-0"></div>
+			<div class="absolute bottom-0 left-0 -ml-20 -mb-20 w-96 h-96 rounded-full bg-blue-500/20 blur-3xl z-0"></div>
 		</div>
 
-		<div class="login-box animate__animated animate__fadeIn">
-			<div class="title">
-				<h2>基于YOLO+AI的农作物病虫害检测与环境监测一体化智能云平台</h2>
-			</div>
+		<!-- Right Section: Login Form -->
+		<div class="w-full lg:w-1/2 flex items-center justify-center p-8 sm:p-12 lg:p-24 bg-white relative">
+			<!-- Subtle corner decoration for the right side -->
+			<div class="absolute top-0 right-0 w-64 h-64 bg-emerald-50 rounded-bl-[100px] opacity-50 pointer-events-none"></div>
 
-			<el-form :model="ruleForm" :rules="registerRules" ref="ruleFormRef">
-				<el-form-item prop="username">
-					<el-input v-model="ruleForm.username" placeholder="请输入用户名" prefix-icon="User" class="custom-input" />
-				</el-form-item>
+			<div class="w-full max-w-md relative z-10 animate__animated animate__fadeInUp animate__faster">
+				<div class="lg:hidden w-12 h-12 bg-emerald-100 rounded-xl flex items-center justify-center mb-6">
+					<i class="iconfontjs icon-zhihui text-2xl text-emerald-600"></i>
+				</div>
+				
+				<h2 class="text-3xl font-bold text-gray-800 mb-2 tracking-tight">欢迎回来</h2>
+				<p class="text-gray-500 mb-8 border-b border-gray-100 pb-6">请输入您的账户进行登录管理系统</p>
 
-				<el-form-item prop="password">
-					<el-input v-model="ruleForm.password" type="password" placeholder="请输入密码" prefix-icon="Lock" show-password class="custom-input" />
-				</el-form-item>
+				<el-form :model="ruleForm" :rules="registerRules" ref="ruleFormRef" class="space-y-6" @keyup.enter="submitForm(ruleFormRef)">
+					<el-form-item prop="username" class="mb-5">
+						<label class="block text-sm font-medium text-gray-700 mb-2">用户名</label>
+						<el-input 
+							v-model="ruleForm.username" 
+							placeholder="请输入用户名" 
+							class="h-12 text-md w-full" 
+							prefix-icon="User"
+						/>
+					</el-form-item>
 
-				<el-form-item>
-					<el-button type="primary" class="login-btn" @click="submitForm(ruleFormRef)"> 登录 </el-button>
-				</el-form-item>
-			</el-form>
+					<el-form-item prop="password" class="mb-5">
+						<label class="block text-sm font-medium text-gray-700 mb-2">密码</label>
+						<el-input 
+							v-model="ruleForm.password" 
+							type="password" 
+							placeholder="请输入登录密码" 
+							show-password 
+							class="h-12 text-md w-full"
+							prefix-icon="Lock"
+						/>
+					</el-form-item>
 
-			<div class="options">
-				<router-link to="/register">注册账号</router-link>
-				<span>|</span>
-				<a href="#">忘记密码</a>
+					<div class="flex items-center justify-between mb-2">
+						<el-checkbox v-model="rememberMe" class="text-gray-500 font-normal">记住密码</el-checkbox>
+						<a href="#" class="text-sm font-medium text-emerald-600 hover:text-emerald-500 transition-colors">忘记密码？</a>
+					</div>
+
+					<el-form-item class="mt-8 mb-4">
+						<el-button 
+							type="primary" 
+							class="w-full h-12 text-base font-medium rounded-lg shadow-lg shadow-emerald-500/30 hover:shadow-emerald-500/40 transition-all duration-300" 
+							@click="submitForm(ruleFormRef)"
+							:loading="loading">
+							安全登录
+						</el-button>
+					</el-form-item>
+				</el-form>
+
+				<div class="mt-8 text-center text-sm text-gray-500">
+					还没有账号？
+					<router-link to="/register" class="font-medium text-emerald-600 hover:text-emerald-500 hover:underline transition-colors">立即注册申请</router-link>
+				</div>
 			</div>
 		</div>
 	</div>
@@ -48,26 +113,20 @@ import { NextLoading } from '/@/utils/loading';
 import type { FormInstance, FormRules } from 'element-plus';
 import request from '/@/utils/request';
 
-// 定义变量内容
 const { t } = useI18n();
 const storesThemeConfig = useThemeConfig();
 const { themeConfig } = storeToRefs(storesThemeConfig);
 const route = useRoute();
 const router = useRouter();
-const formSize = ref('default');
 const ruleFormRef = ref<FormInstance>();
+const loading = ref(false);
+const rememberMe = ref(false);
 
-/*
- * 定义全局变量，等价Vue2中的data() return。
- */
 const ruleForm = reactive({
 	username: '',
 	password: '',
 });
 
-/*
- * 校验规则。
- */
 const registerRules = reactive<FormRules>({
 	username: [
 		{ required: true, message: '请输入账号', trigger: 'blur' },
@@ -79,41 +138,28 @@ const registerRules = reactive<FormRules>({
 	],
 });
 
-/*
- * 提交后的方法。
- */
-// 时间获取
 const currentTime = computed(() => {
 	return formatAxis(new Date());
 });
-// 登录
+
 const onSignIn = async () => {
-	// 存储 token 到浏览器缓存
 	Session.set('token', Math.random().toString(36).substr(0));
-	// 模拟数据，对接接口时，记得删除多余代码及对应依赖的引入。用于 `/src/stores/userInfo.ts` 中不同用户登录判断（模拟数据）
 	Cookies.set('userName', ruleForm.username);
 	if (!themeConfig.value.isRequestRoutes) {
-		// 前端控制路由，2、请注意执行顺序
 		const isNoPower = await initFrontEndControlRoutes();
 		signInSuccess(isNoPower);
 	} else {
-		// 模拟后端控制路由，isRequestRoutes 为 true，则开启后端控制路由
-		// 添加完动态路由，再进行 router 跳转，否则可能报错 No match found for location with path "/"
 		const isNoPower = await initBackEndControlRoutes();
-		// 执行完 initBackEndControlRoutes，再执行 signInSuccess
 		signInSuccess(isNoPower);
 	}
 };
-// 登录成功后的跳转
+
 const signInSuccess = (isNoPower: boolean | undefined) => {
 	if (isNoPower) {
 		ElMessage.warning('抱歉，您没有登录权限');
 		Session.clear();
 	} else {
-		// 初始化登录成功时间问候语
 		let currentTimeInfo = currentTime.value;
-		// 登录成功，跳到转首页
-		// 如果是复制粘贴的路径，非首页/登录页，那么登录成功后重定向到对应的路径中
 		if (route.query?.redirect) {
 			router.push({
 				path: <string>route.query?.redirect,
@@ -122,32 +168,30 @@ const signInSuccess = (isNoPower: boolean | undefined) => {
 		} else {
 			router.push('/');
 		}
-		// 登录成功提示
 		const signInText = t('message.signInText');
 		ElMessage.success(`${currentTimeInfo}，${signInText}`);
-		// 添加 loading，防止第一次进入界面时出现短暂空白
 		NextLoading.start();
 	}
 };
+
 const submitForm = (formEl: FormInstance | undefined) => {
 	if (!formEl) return;
 	formEl.validate((valid) => {
 		if (valid) {
+			loading.value = true;
 			request.post('/api/user/login', ruleForm).then((res) => {
-				console.log(res);
+				loading.value = false;
 				if (res.code == 0) {
-					Cookies.set('role', res.data.role); //  设置角色
-					//登录成功
+					Cookies.set('role', res.data.role);
 					onSignIn();
 				} else {
-					ElMessage({
-						type: 'error',
-						message: res.msg,
-					});
+					ElMessage.error(res.msg || '登录失败，请检查账号和密码');
 				}
+			}).catch(() => {
+				loading.value = false;
+				ElMessage.error('网络请求异常，请稍候重试');
 			});
 		} else {
-			console.log('error submit!');
 			return false;
 		}
 	});
@@ -155,327 +199,41 @@ const submitForm = (formEl: FormInstance | undefined) => {
 </script>
 
 <style scoped>
-.login-container {
-	min-height: 100vh;
-	width: 100vw;
-	display: flex;
-	align-items: center;
-	justify-content: center;
-	background-image: url('/bg1.png');
-	background-position: center;
-	background-repeat: no-repeat;
-	background-size: 100% 100%;
-	padding: 20px;
+/* Reset Element Plus Input slightly to match Tailwind feel without breaking internal structure */
+:deep(.el-input__wrapper) {
+	background-color: #f8fafc;
+	box-shadow: 0 0 0 1px #e2e8f0 inset !important;
+	border-radius: 0.5rem;
+	transition: all 0.2s ease;
 }
 
-.login-box {
-	position: relative;
-	z-index: 2;
-	transform: translateY(20px);
-	animation: slideUp 0.8s forwards;
-	opacity: 0;
-	width: 460px;
-	padding: 40px 50px;
-	background: rgba(255, 255, 255, 0.95);
-	border-radius: 16px;
-	box-shadow: 0 15px 35px rgba(0, 0, 0, 0.2);
-	backdrop-filter: blur(10px);
+:deep(.el-input__wrapper:hover) {
+	box-shadow: 0 0 0 1px #cbd5e1 inset !important;
+	background-color: #f1f5f9;
 }
 
-.title {
-	text-align: center;
-	margin-bottom: 35px;
-}
-
-.title h2 {
-	font-size: 20px;
-	color: #2c3e50;
-	margin-bottom: 10px;
-	font-weight: 600;
-}
-
-.title p {
-	font-size: 10px;
-	color: #7f8c8d;
-	letter-spacing: 1px;
-}
-
-:deep(.custom-input .el-input__wrapper) {
-	box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
-	border-radius: 8px;
-	padding: 12px 15px;
-	background: #f8fafc;
-}
-
-:deep(.custom-input .el-input__wrapper:hover) {
-	box-shadow: 0 2px 12px rgba(0, 0, 0, 0.08);
-}
-
-:deep(.custom-input .el-input__wrapper.is-focus) {
-	box-shadow: 0 0 0 1px #409eff;
-	background: #fff;
-}
-
-.login-btn {
-	width: 100%;
-	padding: 12px 0;
-	font-size: 16px;
-	font-weight: 500;
-	letter-spacing: 1px;
-	border-radius: 8px;
-	background: linear-gradient(to right, #2f80ed 0%, #56ccf2 100%);
-	border: none;
-	margin-top: 10px;
-	transition: transform 0.3s ease;
-}
-
-.login-btn:hover {
-	transform: translateY(-2px);
-	background: linear-gradient(to right, #2f80ed 0%, #56ccf2 100%);
-	opacity: 0.9;
-}
-
-.options {
-	margin-top: 25px;
-	text-align: center;
-}
-
-.options a {
-	color: #2f80ed;
-	text-decoration: none;
-	font-size: 15px;
-	transition: all 0.3s ease;
-	font-weight: 500;
-}
-
-.options span {
-	color: #ddd;
-	margin: 0 15px;
-}
-
-.options a:hover {
-	color: #56ccf2;
-	text-decoration: underline;
-}
-
-/* 响应式适配 */
-@media (max-width: 768px) {
-	.login-box {
-		width: 90%;
-		padding: 30px 20px;
-	}
-
-	.title h2 {
-		font-size: 24px;
-	}
-
-	.title p {
-		font-size: 14px;
-	}
-}
-
-/* 添加背景气泡动画 */
-.bg-bubbles {
-	position: absolute;
-	top: 0;
-	left: 0;
-	width: 100%;
-	height: 100%;
-	z-index: 1;
-	overflow: hidden;
-}
-
-.bg-bubbles li {
-	position: absolute;
-	list-style: none;
-	display: block;
-	width: 40px;
-	height: 40px;
-	background-color: rgba(255, 255, 255, 0.15);
-	bottom: -160px;
-	animation: square 25s infinite;
-	transition-timing-function: linear;
-}
-
-.bg-bubbles li:nth-child(1) {
-	left: 10%;
-	width: 80px;
-	height: 80px;
-	animation-delay: 0s;
-}
-
-.bg-bubbles li:nth-child(2) {
-	left: 20%;
-	width: 90px;
-	height: 90px;
-	animation-delay: 2s;
-	animation-duration: 17s;
-}
-
-.bg-bubbles li:nth-child(3) {
-	left: 25%;
-	animation-delay: 4s;
-}
-
-.bg-bubbles li:nth-child(4) {
-	left: 40%;
-	width: 60px;
-	height: 60px;
-	animation-duration: 22s;
-}
-
-.bg-bubbles li:nth-child(5) {
-	left: 70%;
-	width: 120px;
-	height: 120px;
-}
-
-.bg-bubbles li:nth-child(6) {
-	left: 80%;
-	width: 90px;
-	height: 90px;
-	animation-delay: 3s;
-}
-
-.bg-bubbles li:nth-child(7) {
-	left: 32%;
-	width: 60px;
-	height: 60px;
-	animation-delay: 7s;
-}
-
-.bg-bubbles li:nth-child(8) {
-	left: 55%;
-	width: 20px;
-	height: 20px;
-	animation-delay: 15s;
-	animation-duration: 40s;
-}
-
-.bg-bubbles li:nth-child(9) {
-	left: 25%;
-	width: 10px;
-	height: 10px;
-	animation-delay: 2s;
-	animation-duration: 40s;
-}
-
-.bg-bubbles li:nth-child(10) {
-	left: 90%;
-	width: 160px;
-	height: 160px;
-	animation-delay: 11s;
-}
-
-@keyframes square {
-	0% {
-		transform: translateY(0) rotate(0deg);
-		opacity: 1;
-	}
-	100% {
-		transform: translateY(-1000px) rotate(600deg);
-		opacity: 0;
-	}
-}
-
-/* 修改登录框样式 */
-.login-box {
-	position: relative;
-	z-index: 2;
-	transform: translateY(20px);
-	animation: slideUp 0.8s forwards;
-	opacity: 0;
-	width: 460px;
-	padding: 40px 50px;
-	background: rgba(255, 255, 255, 0.95);
-	border-radius: 16px;
-	box-shadow: 0 15px 35px rgba(0, 0, 0, 0.2);
-	backdrop-filter: blur(10px);
-}
-
-@keyframes slideUp {
-	from {
-		transform: translateY(20px);
-		opacity: 0;
-	}
-	to {
-		transform: translateY(0);
-		opacity: 1;
-	}
-}
-
-/* 修改输入框动画部分 */
-:deep(.el-form-item) {
-	opacity: 0;
-}
-
-:deep(.el-form-item:nth-child(odd)) {
-	transform: translateX(-50px);
-	animation: slideRightIn 0.5s forwards;
-}
-
-:deep(.el-form-item:nth-child(even)) {
-	transform: translateX(50px);
-	animation: slideLeftIn 0.5s forwards;
-}
-
-:deep(.el-form-item:nth-child(1)) {
-	animation-delay: 0.2s;
-}
-:deep(.el-form-item:nth-child(2)) {
-	animation-delay: 0.4s;
-}
-
-@keyframes slideRightIn {
-	from {
-		transform: translateX(-50px);
-		opacity: 0;
-	}
-	to {
-		transform: translateX(0);
-		opacity: 1;
-	}
-}
-
-@keyframes slideLeftIn {
-	from {
-		transform: translateX(50px);
-		opacity: 0;
-	}
-	to {
-		transform: translateX(0);
-		opacity: 1;
-	}
-}
-
-/* 按钮悬浮效果增强 */
-.login-btn {
-	transition: all 0.3s ease;
-}
-
-.login-btn:hover {
-	transform: translateY(-3px);
-	box-shadow: 0 7px 14px rgba(50, 50, 93, 0.1), 0 3px 6px rgba(0, 0, 0, 0.08);
-}
-
-.login-btn:active {
-	transform: translateY(-1px);
-}
-
-/* 输入框焦点动画 */
 :deep(.el-input__wrapper.is-focus) {
-	animation: pulse 0.3s ease-in-out;
+	box-shadow: 0 0 0 2px #10b981 inset !important;
+	background-color: #ffffff;
 }
 
-@keyframes pulse {
-	0% {
-		transform: scale(1);
-	}
-	50% {
-		transform: scale(1.02);
-	}
-	100% {
-		transform: scale(1);
-	}
+:deep(.el-input__inner) {
+	color: #1e293b;
+}
+
+:deep(.el-input__inner::placeholder) {
+	color: #94a3b8;
+}
+
+/* Customized primary button to use Emerald color via Element UI deep classes */
+:deep(.el-button--primary) {
+	background-color: #10b981;
+	border-color: #10b981;
+}
+
+:deep(.el-button--primary:hover),
+:deep(.el-button--primary:focus) {
+	background-color: #059669;
+	border-color: #059669;
 }
 </style>

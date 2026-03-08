@@ -1,68 +1,78 @@
 <template>
-	<div class="system-role-container layout-padding">
-		<div class="system-role-padding layout-padding-auto layout-padding-view">
-			<div class="system-user-search mb15">
-				<el-input v-model="state.tableData.param.search" size="default" placeholder="请输入产品名称" style="max-width: 180px"> </el-input>
-				<el-input v-model="state.tableData.param.warehouse" size="default" placeholder="请输入仓库" class="ml10" style="max-width: 180px"> </el-input>
-				<el-input v-model="state.tableData.param.storageArea" size="default" placeholder="请输入存储区" class="ml10" style="max-width: 180px"> </el-input>
-				<el-input v-model="state.tableData.param.manager" size="default" placeholder="请输入仓库管理员" class="ml10" style="max-width: 180px"> </el-input>
-				<!-- <el-input v-model="state.tableData.param.phone" size="default" placeholder="请输入手机号" class="ml10" style="max-width: 180px"> </el-input> -->
-				<el-button size="default" type="primary" class="ml10" @click="getTableData()">
-					<el-icon>
-						<ele-Search />
-					</el-icon>
-					查询
-				</el-button>
-				<el-button size="default" type="success" class="ml10" @click="onOpenAddStorage('add')">
-					<el-icon>
-						<ele-FolderAdd />
-					</el-icon>
-					添加
-				</el-button>
+	<div class="system-role-container">
+		<el-card shadow="never" class="glass-card mb-4">
+			<!-- 顶部搜索域 -->
+			<div class="search-header">
+				<div class="search-inputs">
+					<el-input v-model="state.tableData.param.search" placeholder="产品名称" clearable class="custom-input" />
+					<el-input v-model="state.tableData.param.warehouse" placeholder="用途/仓库" clearable class="custom-input ml-2" />
+					<el-input v-model="state.tableData.param.manager" placeholder="管理员" clearable class="custom-input ml-2" />
+				</div>
+				<div class="search-actions">
+					<el-button type="primary" @click="getTableData" :loading="state.tableData.loading" class="action-btn query-btn">
+						查询库存
+					</el-button>
+					<el-button type="success" @click="onOpenAddStorage('add')" class="action-btn add-btn">
+						<el-icon class="mr-1"><Plus /></el-icon> 新增入库
+					</el-button>
+				</div>
 			</div>
-			<el-table :data="state.tableData.data" v-loading="state.tableData.loading" style="width: 100%">
-				<el-table-column prop="id" label="ID" width="80" align="center" />
-				<el-table-column prop="product" label="产品" show-overflow-tooltip width="125" align="center" />
-				<el-table-column prop="warehouse" label="用途" show-overflow-tooltip width="180" align="center" />
-				<el-table-column prop="storageArea" label="存储区" show-overflow-tooltip width="125" align="center" />
-				<el-table-column prop="quantity" label="数量" width="125" align="center" />
-				<el-table-column prop="manager" label="仓库管理员" show-overflow-tooltip width="125" align="center" />
-				<el-table-column prop="phone" label="手机号" show-overflow-tooltip width="150" align="center" />
-				<el-table-column prop="remark" label="备注" show-overflow-tooltip width="180" align="center" />
-				<el-table-column label="操作" width="150" fixed="right" align="center">
-					<template #default="scope">
-						<el-button size="small" text type="primary" @click="onOpenEditStorage('edit', scope.row)">修改</el-button>
-						<el-button size="small" text type="primary" @click="onRowDel(scope.row)">删除</el-button>
-					</template>
-				</el-table-column>
-			</el-table>
-			<el-pagination
-				@size-change="onHandleSizeChange"
-				@current-change="onHandleCurrentChange"
-				class="mt15"
-				:pager-count="5"
-				:page-sizes="[10, 20, 30]"
-				v-model:current-page="state.tableData.param.pageNum"
-				background
-				v-model:page-size="state.tableData.param.pageSize"
-				layout="total, sizes, prev, pager, next, jumper"
-				:total="state.tableData.total"
-			>
-			</el-pagination>
-		</div>
-		<StorageDialog ref="storageDialogRef" @refresh="getTableData()" />
+
+			<!-- 数据容器 -->
+			<div class="table-wrapper">
+				<el-table 
+					:data="state.tableData.data" 
+					v-loading="state.tableData.loading" 
+					class="custom-table"
+				>
+					<el-table-column prop="id" label="ID" width="80" align="center" />
+					<el-table-column prop="product" label="产品名称" show-overflow-tooltip />
+					<el-table-column prop="warehouse" label="预期用途" show-overflow-tooltip />
+					<el-table-column prop="storageArea" label="存储区域" width="120" align="center" />
+					<el-table-column prop="quantity" label="在库数量" width="100" align="center">
+						<template #default="scope">
+							<span class="font-bold text-emerald-600">{{ scope.row.quantity }}</span>
+						</template>
+					</el-table-column>
+					<el-table-column prop="manager" label="经手人" width="120" align="center" />
+					<el-table-column prop="phone" label="联系电话" width="140" />
+					<el-table-column prop="remark" label="备注说明" show-overflow-tooltip />
+
+					<el-table-column label="操作" width="140" fixed="right" align="right">
+						<template #default="scope">
+							<el-button link type="primary" @click="onOpenEditStorage('edit', scope.row)">修改</el-button>
+							<el-button link type="danger" @click="onRowDel(scope.row)">移除</el-button>
+						</template>
+					</el-table-column>
+				</el-table>
+
+				<div class="pagination-footer mt-4">
+					<el-pagination
+						@size-change="onHandleSizeChange"
+						@current-change="onHandleCurrentChange"
+						:pager-count="5"
+						:page-sizes="[10, 20, 50]"
+						v-model:current-page="state.tableData.param.pageNum"
+						background
+						v-model:page-size="state.tableData.param.pageSize"
+						layout="total, sizes, prev, pager, next"
+						:total="state.tableData.total"
+					/>
+				</div>
+			</div>
+		</el-card>
+
+		<StorageDialog ref="storageDialogRef" @refresh="getTableData" />
 	</div>
 </template>
 
-<script setup lang="ts" name="systemRole">
+<script setup lang="ts" name="storageManage">
 import { defineAsyncComponent, reactive, onMounted, ref } from 'vue';
 import { ElMessageBox, ElMessage } from 'element-plus';
 import request from '/@/utils/request';
+import { Search, Plus } from '@element-plus/icons-vue';
 
-// 引入组件
 const StorageDialog = defineAsyncComponent(() => import('./dialog.vue'));
-
-// 定义变量内容
 const storageDialogRef = ref();
 const state = reactive({
 	tableData: {
@@ -70,110 +80,96 @@ const state = reactive({
 		total: 0,
 		loading: false,
 		param: {
-			search: '',
-			warehouse: '',
-			storageArea: '',
-			manager: '',
-			phone: '',
-			pageNum: 1,
-			pageSize: 10,
+			search: '', warehouse: '', storageArea: '', manager: '', phone: '',
+			pageNum: 1, pageSize: 10,
 		},
 	},
 });
 
-// 获取表格数据
 const getTableData = () => {
 	state.tableData.loading = true;
-	request
-		.get('/api/storage', {
-			params: state.tableData.param,
-		})
-		.then((res) => {
+	request.get('/api/storage', { params: state.tableData.param }).then((res) => {
+		if (res.code == 0) {
+			state.tableData.data = res.data.records;
+			state.tableData.total = res.data.total;
+			state.tableData.loading = false;
+		}
+	});
+};
+
+const onOpenAddStorage = (type: string) => storageDialogRef.value.openDialog(type);
+const onOpenEditStorage = (type: string, row: Object) => storageDialogRef.value.openDialog(type, row);
+
+const onRowDel = (row: any) => {
+	ElMessageBox.confirm(`确认移除核心库存信息？`, '警告', { type: 'warning' }).then(() => {
+		request.delete('/api/storage/' + row.id).then((res) => {
 			if (res.code == 0) {
-				state.tableData.data = res.data.records;
-				state.tableData.total = res.data.total;
-				state.tableData.loading = false;
-			} else {
-				ElMessage({
-					type: 'error',
-					message: res.msg,
-				});
+				ElMessage.success('移除成功');
+				getTableData();
 			}
 		});
+	}).catch(() => {});
 };
 
-// 打开新增库存弹窗
-const onOpenAddStorage = (type: string) => {
-	storageDialogRef.value.openDialog(type);
-};
+const onHandleSizeChange = (val: number) => { state.tableData.param.pageSize = val; getTableData(); };
+const onHandleCurrentChange = (val: number) => { state.tableData.param.pageNum = val; getTableData(); };
 
-// 打开修改库存弹窗
-const onOpenEditStorage = (type: string, row: Object) => {
-	storageDialogRef.value.openDialog(type, row);
-};
-
-// 删除库存
-const onRowDel = (row: any) => {
-	ElMessageBox.confirm(`此操作将永久删除该库存信息，是否继续?`, '提示', {
-		confirmButtonText: '确认',
-		cancelButtonText: '取消',
-		type: 'warning',
-	})
-		.then(() => {
-			request.delete('/api/storage/' + row.id).then((res) => {
-				if (res.code == 0) {
-					ElMessage({
-						type: 'success',
-						message: '删除成功！',
-					});
-					getTableData();
-				} else {
-					ElMessage({
-						type: 'error',
-						message: res.msg,
-					});
-				}
-			});
-		})
-		.catch(() => {});
-};
-
-// 分页改变
-const onHandleSizeChange = (val: number) => {
-	state.tableData.param.pageSize = val;
-	getTableData();
-};
-
-// 分页改变
-const onHandleCurrentChange = (val: number) => {
-	state.tableData.param.pageNum = val;
-	getTableData();
-};
-
-// 页面加载时
-onMounted(() => {
-	getTableData();
-});
+onMounted(() => getTableData());
 </script>
 
 <style scoped lang="scss">
 .system-role-container {
-	.system-role-padding {
-		padding: 15px;
-		.el-table {
-			flex: 1;
-			:deep(.el-table__row) {
-				height: 45px;  // 设置行高
-			}
-			:deep(.el-table__header) {
-				th {
-					padding: 8px 0;  // 减小表头padding
-				}
-			}
-			:deep(.el-table__cell) {
-				padding: 4px 0;  // 减小单元格padding
-			}
-		}
+	padding: 20px;
+	.glass-card {
+		background: rgba(255, 255, 255, 0.7);
+		backdrop-filter: blur(12px);
+		border-radius: 16px;
+		border: 1px solid rgba(255, 255, 255, 0.5);
+		padding: 20px;
 	}
 }
-</style> 
+
+.search-header {
+	display: flex;
+	justify-content: space-between;
+	align-items: center;
+	margin-bottom: 24px;
+
+	.search-inputs {
+		display: flex;
+		.custom-input { width: 160px; margin-right: 10px; }
+		:deep(.el-input__wrapper) { border-radius: 8px; background: rgba(255, 255, 255, 0.5); }
+	}
+}
+
+.action-btn { border-radius: 8px; font-weight: 600; }
+.query-btn { background: linear-gradient(135deg, #3B82F6, #2563EB) !important; border: none !important; }
+.add-btn { background: linear-gradient(135deg, #10B981, #059669) !important; border: none !important; }
+
+.table-wrapper {
+	background: rgba(255, 255, 255, 0.4);
+	border-radius: 12px;
+	padding: 10px;
+	border: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+.custom-table {
+	background: transparent !important;
+	--el-table-bg-color: transparent;
+	--el-table-tr-bg-color: transparent;
+
+	:deep(.el-table__header) th {
+		font-weight: 700;
+		color: #1e293b;
+		background: transparent !important;
+		padding: 12px 0;
+	}
+
+	:deep(.el-table__row) {
+		height: 60px;
+		&:hover td { background-color: rgba(16, 185, 129, 0.05) !important; }
+	}
+}
+
+.pagination-footer { display: flex; justify-content: flex-end; }
+</style>

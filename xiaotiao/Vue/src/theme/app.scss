@@ -17,7 +17,7 @@
 
 :root {
 	--next-color-white: #ffffff;
-	--next-bg-main-color: #f8f8f8;
+	--next-bg-main-color: #f8fafc; /* Tailwind slate-50 */
 	--next-bg-color: #f5f5ff;
 	--next-border-color-light: #f1f2f3;
 	--next-color-primary-lighter: #ecf5ff;
@@ -39,11 +39,19 @@ body,
 	padding: 0;
 	width: 100%;
 	height: 100%;
-	font-family: Helvetica Neue, Helvetica, PingFang SC, Hiragino Sans GB, Microsoft YaHei, SimSun, sans-serif;
+	font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, 'Noto Sans', sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji', 'Segoe UI Symbol', 'Noto Color Emoji';
 	font-weight: 400;
 	-webkit-font-smoothing: antialiased;
 	-webkit-tap-highlight-color: transparent;
 	background-color: var(--next-bg-main-color);
+	/* Subtle SaaS mesh gradient */
+	background-image: radial-gradient(at 40% 20%, hsla(150,100%,96%,1) 0px, transparent 50%),
+                      radial-gradient(at 80% 0%, hsla(200,100%,96%,1) 0px, transparent 50%),
+                      radial-gradient(at 0% 50%, hsla(200,100%,96%,1) 0px, transparent 50%),
+                      radial-gradient(at 80% 50%, hsla(150,100%,96%,1) 0px, transparent 50%),
+                      radial-gradient(at 0% 100%, hsla(200,100%,96%,1) 0px, transparent 50%),
+                      radial-gradient(at 80% 100%, hsla(150,100%,96%,1) 0px, transparent 50%),
+                      radial-gradient(at 0% 0%, hsla(200,100%,96%,1) 0px, transparent 50%);
 	font-size: 14px;
 	overflow: hidden;
 	position: relative;
@@ -56,7 +64,7 @@ body,
 	height: 100%;
 
 	.layout-pd {
-		padding: 15px !important;
+		padding: 24px !important;
 	}
 
 	.layout-flex {
@@ -120,11 +128,14 @@ body,
 		}
 
 		&-view {
-			background: var(--el-color-white);
+			background: rgba(255, 255, 255, 0.6); /* Translucent background to show mesh gradient */
+			backdrop-filter: blur(16px);
+			-webkit-backdrop-filter: blur(16px);
 			width: 100%;
 			height: 100%;
-			border-radius: 4px;
-			border: 1px solid var(--el-border-color-light, #ebeef5);
+			border-radius: 8px; /* Softer radius */
+			border: 1px solid rgba(255, 255, 255, 0.4); /* Glassmorphism border */
+			box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -2px rgba(0, 0, 0, 0.05); /* Soft SaaS shadow */
 			overflow: hidden;
 		}
 	}

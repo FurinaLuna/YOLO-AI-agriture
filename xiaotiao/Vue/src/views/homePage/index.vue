@@ -1,7 +1,7 @@
 <script setup lang="ts">
-import { ref, onMounted } from 'vue'
+import { ref, onMounted, onUnmounted, nextTick } from 'vue'
 import * as echarts from 'echarts'
-import { ElCard } from 'element-plus'
+import { ElCard, ElButton, ElTag } from 'element-plus'
 import 'element-plus/dist/index.css'
 
 // 统计数据
@@ -16,578 +16,525 @@ const statistics = ref({
 let diseaseDistChart: echarts.ECharts
 let plantingStatsChart: echarts.ECharts
 
-// 天气信息
-const weatherInfo = ref({
+// 今日日期
+const today = ref({
   date: '',
-  weekday: '',
-  status: '',
-  temperature: '',
-  feelsLike: '',
-  weather: '',
-  wind: '',
-  windSpeed: '',
-  humidity: '',
-  pressure: '',
-  vis: '',
-  precip: '',
-  cloud: '',
-  dew: '',
-  notice: ''
+  weekday: ''
 })
 
-// 种植作物数据
+// 天气信息
+const weatherInfo = ref({
+  temperature: '24°C',
+  weather: '晴转多云',
+  humidity: '65%',
+  wind: '东北风 2级',
+  notice: '当前气象条件适宜农事活动，建议进行作物追肥。'
+})
+
+// 作物状态数据
 const cropTypes = ref([
-  { name: '1号温室', crop: '玉米', status: '生长良好', plantCount: 350, diseaseCount: 20 },
-  { name: '2号温室', crop: '水稻', status: '生长良好', plantCount: 400, diseaseCount: 15 },
-  { name: '3号温室', crop: '小麦', status: '需要关注', plantCount: 350, diseaseCount: 18 },
-  { name: '4号温室', crop: '马铃薯', status: '生长良好', plantCount: 250, diseaseCount: 12 },
-  { name: '5号温室', crop: '棉花', status: '生长良好', plantCount: 300, diseaseCount: 16 },
-  { name: '6号温室', crop: '苹果', status: '需要关注', plantCount: 8, diseaseCount: 14 },
-  { name: '7号温室', crop: '葡萄', status: '生长良好', plantCount: 300, diseaseCount: 17 },
-  { name: '8号温室', crop: '番茄', status: '生长良好', plantCount: 300, diseaseCount: 14 },
-  { name: '9号温室', crop: '草莓', status: '生长良好', plantCount: 300, diseaseCount: 15 }
+  { name: '1号温室', crop: '玉米', status: '生长良好', plantCount: 350, diseaseCount: 0 },
+  { name: '2号温室', crop: '水稻', status: '生长良好', plantCount: 400, diseaseCount: 2 },
+  { name: '3号温室', crop: '小麦', status: '异常预警', plantCount: 350, diseaseCount: 18 },
+  { name: '4号温室', crop: '马铃薯', status: '生长良好', plantCount: 250, diseaseCount: 1 },
+  { name: '5号温室', crop: '棉花', status: '生长良好', plantCount: 300, diseaseCount: 3 },
+  { name: '6号温室', crop: '苹果', status: '需要关注', plantCount: 128, diseaseCount: 14 }
 ])
 
 // 农业链接
 const agricultureLinks = ref([
   { name: '中国农村网', url: 'https://www.crnews.net/', icon: 'icon-nongye' },
   { name: '中国农业网', url: 'https://www.zgny.com/', icon: 'icon-keji' },
-  { name: '农业气象网', url: 'http://www.nmc.cn/publish/agro/soil-moisture-monitoring-10cm.html', icon: 'icon-zhihui' },
-  { name: '农业病虫害服务站', url: 'https://farm.sino-eco.com/website/bingchonghai/', icon: 'icon-qixiang' },
   { name: '国家农业数据中心', url: 'https://www.agridata.cn/', icon: 'icon-qixiang' },
-  { name: '农业病虫害研究图库', url: 'http://www.icgroupcas.cn/website_bchtk/zhenduan.aspx', icon: 'icon-qixiang' },
-  { name: '中国害虫防治网', url: 'http://zghcfzw.com/', icon: 'icon-qixiang' },
-  { name: '中国农业科学院', url: 'https://www.caas.cn/', icon: 'icon-qixiang' },
-  { name: '中国农业农村信息网', url: 'https://www.agri.cn/', icon: 'icon-qixiang' },
-  { name: '农业中国_中国网', url: 'http://agri.china.com.cn/', icon: 'icon-bingchonghai' }
+  { name: '农业科技报', url: 'https://www.nkb.com.cn/', icon: 'icon-zhihui' }
 ])
 
-// 获取天气数据 - 通过后端代理调用和风天气API
+// 获取实时天气数据 (模拟原有逻辑)
 const fetchWeatherData = async () => {
+  const date = new Date()
+  const weekdays = ['周日', '周一', '周二', '周三', '周四', '周五', '周六']
+  today.value.date = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`
+  today.value.weekday = weekdays[date.getDay()]
+  
   try {
     const response = await fetch('http://localhost:9999/weather/now?location=101240101')
     const data = await response.json()
-    
     if (data.code === '200' && data.now) {
-      const now = data.now
-      const weekdays = ['周日', '周一', '周二', '周三', '周四', '周五', '周六']
-      const date = new Date()
-      
       weatherInfo.value = {
-        date: `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`,
-        weekday: weekdays[date.getDay()],
-        status: '南昌',
-        temperature: now.temp + '°C',
-        feelsLike: now.feelsLike + '°C',
-        weather: now.text,
-        wind: `${now.windDir} ${now.windScale}级`,
-        windSpeed: now.windSpeed + ' km/h',
-        humidity: now.humidity + '%',
-        pressure: now.pressure + ' hPa',
-        vis: now.vis + ' km',
-        precip: now.precip + ' mm',
-        cloud: now.cloud + '%',
-        dew: now.dew + '°C',
-        notice: now.text.includes('雨') ? '今日有雨，注意防雨防涝' : 
-                now.text.includes('晴') ? '天气晴好，适宜农事活动' : 
-                now.text.includes('阴') ? '天气阴沉，注意作物光照' : 
-                '天气一般，注意观察作物状态'
+        temperature: data.now.temp + '°C',
+        weather: data.now.text,
+        humidity: data.now.humidity + '%',
+        wind: `${data.now.windDir} ${data.now.windScale}级`,
+        notice: data.now.text.includes('雨') ? '今日有雨，请注意温室排涝。' : '天气晴好，适宜大田作业。'
       }
-    } else {
-      console.error('天气API返回错误:', data.code, data.message)
     }
   } catch (err) {
-    console.error('获取天气数据失败:', err)
+    console.warn('Weather API connection failed, using fallback data.')
   }
 }
 
+// 初始化 ECharts 图表（升级配色与交互）
+const initCharts = () => {
+  const pieDom = document.getElementById('diseasePieChart')
+  if (pieDom) {
+    diseaseDistChart = echarts.init(pieDom)
+    diseaseDistChart.setOption({
+      backgroundColor: 'transparent',
+      tooltip: { trigger: 'item', padding: 10, borderRadius: 8 },
+      legend: { bottom: '5%', icon: 'circle', textStyle: { color: '#64748b' } },
+      color: ['#10B981', '#3B82F6', '#6366F1', '#F59E0B', '#EF4444'],
+      series: [{
+        name: '病害种类',
+        type: 'pie',
+        radius: ['55%', '75%'],
+        avoidLabelOverlap: false,
+        itemStyle: { borderRadius: 10, borderColor: '#fff', borderWidth: 4 },
+        label: { show: false },
+        emphasis: { label: { show: true, fontSize: 16, fontWeight: 'bold' } },
+        data: [
+          { value: 45, name: '水稻稻瘟病' },
+          { value: 30, name: '玉米锈病' },
+          { value: 25, name: '小麦白粉病' },
+          { value: 18, name: '番茄早疫病' },
+          { value: 23, name: '马铃薯晚疫病' }
+        ]
+      }]
+    })
+  }
+
+  const lineDom = document.getElementById('yieldLineChart')
+  if (lineDom) {
+    plantingStatsChart = echarts.init(lineDom)
+    plantingStatsChart.setOption({
+      backgroundColor: 'transparent',
+      tooltip: { trigger: 'axis', axisPointer: { type: 'cross' } },
+      grid: { left: '4%', right: '4%', bottom: '10%', top: '15%', containLabel: true },
+      xAxis: { 
+        type: 'category', 
+        data: ['1月', '3月', '5月', '7月', '9月', '11月'],
+        axisLine: { lineStyle: { color: '#e2e8f0' } },
+        axisLabel: { color: '#94a3b8' }
+      },
+      yAxis: { 
+        type: 'value', 
+        name: '预估产量/吨',
+        splitLine: { lineStyle: { color: '#f1f5f9', type: 'dashed' } },
+        axisLabel: { color: '#94a3b8' }
+      },
+      series: [{
+        name: '预估产量',
+        type: 'line',
+        smooth: true,
+        symbol: 'circle',
+        symbolSize: 8,
+        lineStyle: { width: 3, color: '#10B981' },
+        itemStyle: { color: '#10B981' },
+        areaStyle: {
+          color: new echarts.graphic.LinearGradient(0, 0, 0, 1, [
+            { offset: 0, color: 'rgba(16,185,129,0.2)' },
+            { offset: 1, color: 'rgba(16,185,129,0.01)' }
+          ])
+        },
+        data: [220, 310, 420, 580, 750, 890]
+      }]
+    })
+  }
+}
+
+const handleResize = () => {
+  diseaseDistChart?.resize()
+  plantingStatsChart?.resize()
+}
+
 onMounted(() => {
-  fetchWeatherData() // 获取天气数据
+  fetchWeatherData()
+  nextTick(() => {
+    initCharts()
+    window.addEventListener('resize', handleResize)
+  })
 })
 
+onUnmounted(() => {
+  window.removeEventListener('resize', handleResize)
+  diseaseDistChart?.dispose()
+  plantingStatsChart?.dispose()
+})
 </script>
 
 <template>
-  <div class="home-page">
-    <!-- 顶部区域 -->
-    <div class="top-section">
-      <!-- 系统公告 -->
-      <ElCard class="notice-card">
-        <template #header>
-          <div class="card-header">
-            <span>系统公告</span>
-          </div>
-        </template>
-        <div class="notice-content">
-          尊敬的各位系统用户：您好！欢迎使用本智慧农业云平台系统。为确保您能够顺畅、高效地运用本系统，充分发挥其功能优势，现将首页关键使用事项公告如下，请您仔细阅读并予以配合。本智慧农业云平台集成了多项先进技术，通过首页，您可一键快速实时查看环境监测、病害生长数据分析、园林作物病虫害监控。促进病虫害及时发现及防治，助力农业智能化。科学化管理重点养殖业，提升养殖效益与质量！
+  <div class="home-view">
+    
+    <!-- 1. 顶部数据概览卡片 (SaaS Metrics) -->
+    <div class="metrics-row animate__animated animate__fadeInDown">
+      <div class="metric-card">
+        <div class="ico-bg b-em">
+          <i class="iconfontjs icon-yh"></i>
         </div>
-      </ElCard>
-
-      <!-- 常用应用 -->
-      <ElCard class="quick-apps-card">
-        <template #header>
-          <div class="card-header">
-            <span>常用应用</span>
-          </div>
-        </template>
-        <div class="apps-grid">
-          <div class="app-item" @click="$router.push('/infoDisease')">
-            <div class="app-icon">
-              <i class="iconfontjs icon-bingchonghai-1haichong"></i>
-            </div>
-            <span>病虫害数据库</span>
-          </div>
-          <div class="app-item" @click="$router.push('/smartChat')">
-            <div class="app-icon">
-              <i class="iconfontjs icon-znwd"></i>
-            </div>
-            <span>智能助手</span>
-          </div>
-          <div class="app-item" @click="$router.push('/imgPredict')">
-            <div class="app-icon">
-              <i class="iconfontjs icon-tpjc"></i>
-            </div>
-            <span>图片检测</span>
-          </div>
-          <div class="app-item" @click="$router.push('/imgRecord')">
-            <div class="app-icon">
-              <i class="iconfontjs icon-tpjl"></i>
-            </div>
-            <span>图片检测记录</span>
-          </div>
-          <div class="app-item" @click="$router.push('/videoPredict')">
-            <div class="app-icon">
-              <i class="iconfontjs icon-spjc"></i>
-            </div>
-            <span>视频检测</span>
-          </div>
-          <div class="app-item" @click="$router.push('/videoRecord')">
-            <div class="app-icon">
-              <i class="iconfontjs icon-spjl"></i>
-            </div>
-            <span>视频检测记录</span>
-          </div>
-        </div>
-      </ElCard>
-
-      <!-- 天气信息 -->
-      <ElCard class="weather-card">
-        <template #header>
-          <div class="card-header">
-            <span>天气预报</span>
-          </div>
-        </template>
-        <div class="weather-info">
-          <div class="weather-header">
-            {{ weatherInfo.date }} &nbsp; {{ weatherInfo.weekday }}&nbsp; {{ weatherInfo.status }}
-          </div>
-          <div class="weather-details">
-            <div class="weather-item">温度: {{ weatherInfo.temperature }}</div>
-            <div class="weather-item">体感温度: {{ weatherInfo.feelsLike }}</div>
-            <div class="weather-item">天气: {{ weatherInfo.weather }}</div>
-            <div class="weather-item">风向: {{ weatherInfo.wind }}</div>
-            <div class="weather-item">风速: {{ weatherInfo.windSpeed }}</div>
-            <div class="weather-item">湿度: {{ weatherInfo.humidity }}</div>
-            <div class="weather-item">气压: {{ weatherInfo.pressure }}</div>
-            <div class="weather-item">能见度: {{ weatherInfo.vis }}</div>
-            <div class="weather-item">降水量: {{ weatherInfo.precip }}</div>
-            <div class="weather-item">云量: {{ weatherInfo.cloud }}</div>
-            <div class="weather-item">露点温度: {{ weatherInfo.dew }}</div>
-          </div>
-          <div class="weather-notice">注意事项：
-            {{ weatherInfo.notice }}
-          </div>
-        </div>
-      </ElCard>
-    </div>
-
-    <!-- 数据统计 -->
-    <div class="statistics-row">
-      <div class="stat-item">
-        <i class="iconfontjs icon-yh"></i>
-        <div class="stat-info">
-          <div class="stat-value">{{ statistics.users }}</div>
-          <div class="stat-label">用户</div>
+        <div class="m-content">
+          <div class="v">{{ statistics.users }}</div>
+          <div class="l">活跃用户</div>
         </div>
       </div>
-      <div class="stat-item">
-        <i class="iconfontjs icon-znws"></i>
-        <div class="stat-info">
-          <div class="stat-value">{{ statistics.greenhouse }}</div>
-          <div class="stat-label">温室</div>
+      <div class="metric-card">
+        <div class="ico-bg b-bl">
+          <i class="iconfontjs icon-znws"></i>
+        </div>
+        <div class="m-content">
+          <div class="v">{{ statistics.greenhouse }}</div>
+          <div class="l">受控温室</div>
         </div>
       </div>
-      <div class="stat-item">
-        <i class="iconfontjs icon-bingchonghai-1haichong"></i>
-        <div class="stat-info">
-          <div class="stat-value">{{ statistics.diseases }}</div>
-          <div class="stat-label">病害</div>
+      <div class="metric-card">
+        <div class="ico-bg b-or">
+          <i class="iconfontjs icon-bingchonghai-1haichong"></i>
+        </div>
+        <div class="m-content">
+          <div class="v">{{ statistics.diseases }}</div>
+          <div class="l">病害记录</div>
         </div>
       </div>
-      <div class="stat-item">
-        <i class="iconfontjs icon-cc"></i>
-        <div class="stat-info">
-          <div class="stat-value">{{ statistics.yield }}</div>
-          <div class="stat-label">产量</div>
+      <div class="metric-card">
+        <div class="ico-bg b-pu">
+          <i class="iconfontjs icon-cc"></i>
+        </div>
+        <div class="m-content">
+          <div class="v">{{ statistics.yield }}</div>
+          <div class="l">年度产量(t)</div>
         </div>
       </div>
     </div>
 
-    <!-- 图表区域 -->
-    <div class="charts-container">
-      <!-- 温室作物信息和农业链接并排显示 -->
-      <div class="content-row">
-        <!-- 温室作物信息 -->
-        <ElCard class="crop-info-card">
+    <div class="main-grid">
+      <!-- 2. 系统公告 & 天气 (左侧/中侧) -->
+      <div class="left-col animate__animated animate__fadeInLeft">
+        <el-card class="glass-card mb-4 notice-container">
           <template #header>
-            <div class="card-header">
-              <span>温室作物信息</span>
+            <div class="c-header">
+              <span class="dot-green"></span>
+              <h4>平台核心公告</h4>
             </div>
           </template>
-          <div class="crop-grid">
-            <div v-for="(item, index) in cropTypes" :key="index" class="crop-item">
-              <div class="crop-header">{{ item.name }}</div>
-              <div class="crop-content">
-                <div class="crop-type">作物：{{ item.crop }}</div>
-                <div class="crop-numbers">
-                  <span class="plant-count">种植数量：{{ item.plantCount }}</span>
-                  <span class="disease-count">病害数量：{{ item.diseaseCount }}</span>
-                </div>
-                <div class="crop-status" :class="{ 'warning': item.status === '需要关注' }">
-                  状态：{{ item.status }}
-                </div>
+          <div class="n-body">
+            尊敬的农研专家：本平台已深度集成 <strong>智谱 GLM-4 智能助研</strong> 引擎，支持实时病害图像识别与农事策略生成。请通过“图片检测”或“智能助手”模块开启您的智慧农研之旅。
+          </div>
+        </el-card>
+
+        <el-card class="glass-card weather-container">
+          <template #header>
+            <div class="c-header">
+              <i class="iconfontjs icon-qixiang text-blue-500 mr-2"></i>
+              <h4>产区实时气象</h4>
+            </div>
+          </template>
+          <div class="w-body">
+            <div class="w-main">
+              <span class="temp">{{ weatherInfo.temperature }}</span>
+              <div class="w-status">
+                <div class="txt">{{ weatherInfo.weather }}</div>
+                <div class="day">{{ today.weekday }} · {{ today.date }}</div>
               </div>
             </div>
+            <div class="w-grid">
+              <div class="wi"><span>湿度:</span> {{ weatherInfo.humidity }}</div>
+              <div class="wi"><span>风力:</span> {{ weatherInfo.wind }}</div>
+            </div>
+            <div class="w-notice">
+              <i class="iconfontjs icon-znwd mr-1"></i> {{ weatherInfo.notice }}
+            </div>
           </div>
-        </ElCard>
+        </el-card>
+      </div>
 
-        <!-- 农业链接 -->
-        <ElCard class="links-card">
+      <!-- 3. 常用应用 (右侧缩略) -->
+      <div class="right-col animate__animated animate__fadeInRight">
+        <el-card class="glass-card app-card">
           <template #header>
-            <div class="card-header">
-              <span>常用农业链接</span>
+            <div class="c-header">
+              <h4>快捷农技入口</h4>
+              <el-button link type="primary" size="small">更多</el-button>
             </div>
           </template>
-          <div class="links-grid">
-            <a v-for="(link, index) in agricultureLinks" 
-               :key="index" 
-               :href="link.url" 
-               target="_blank" 
-               class="link-item">
-              <i :class="link.icon"></i>
-              <span>{{ link.name }}</span>
+          <div class="app-grid">
+            <div class="ai" @click="$router.push('/smartChat')">
+              <div class="ai-box b-bl"><i class="iconfontjs icon-znwd"></i></div>
+              <span>GLM 助手</span>
+            </div>
+            <div class="ai" @click="$router.push('/imgPredict')">
+              <div class="ai-box b-em"><i class="iconfontjs icon-tpjc"></i></div>
+              <span>图片检测</span>
+            </div>
+            <div class="ai" @click="$router.push('/videoPredict')">
+              <div class="ai-box b-or"><i class="iconfontjs icon-spjc"></i></div>
+              <span>视频监控</span>
+            </div>
+            <div class="ai" @click="$router.push('/infoDisease')">
+              <div class="ai-box b-pu"><i class="iconfontjs icon-bingchonghai-1haichong"></i></div>
+              <span>病害百科</span>
+            </div>
+          </div>
+        </el-card>
+
+        <!-- 农业外链 -->
+         <el-card class="glass-card mt-4 links-container">
+          <div class="links-list">
+            <a v-for="link in agricultureLinks" :key="link.name" :href="link.url" target="_blank" class="l-item">
+              {{ link.name }} <i class="iconfontjs icon-tpjl"></i>
             </a>
           </div>
-        </ElCard>
+         </el-card>
       </div>
     </div>
+
+    <!-- 4. 数据图表行 -->
+    <div class="charts-row animate__animated animate__fadeInUp">
+      <el-card class="glass-card p-chart">
+        <template #header>
+          <div class="c-header"><h4>重点病害分布统计</h4></div>
+        </template>
+        <div id="diseasePieChart" class="chart-box"></div>
+      </el-card>
+      <el-card class="glass-card l-chart">
+        <template #header>
+          <div class="c-header"><h4>年度预估产量趋势 (2025)</h4></div>
+        </template>
+        <div id="yieldLineChart" class="chart-box"></div>
+      </el-card>
+    </div>
+
+    <!-- 5. 温室作物状态 -->
+    <div class="greenhouse-section animate__animated animate__fadeInUp animate__delay-1s">
+      <div class="section-title">
+        <span class="v-line"></span>
+        <h3>温室作物实时监测</h3>
+      </div>
+      <div class="gh-grid">
+        <div v-for="gh in cropTypes" :key="gh.name" class="gh-card">
+          <div class="gh-head">
+            <span class="name">{{ gh.name }}</span>
+            <el-tag :type="gh.status === '异常预警' ? 'danger' : gh.status === '需要关注' ? 'warning' : 'success'" size="small" effect="dark">
+              {{ gh.status }}
+            </el-tag>
+          </div>
+          <div class="gh-body">
+            <div class="row"><span>作物种类:</span> <strong>{{ gh.crop }}</strong></div>
+            <div class="row"><span>植株总量:</span> {{ gh.plantCount }}</div>
+            <div class="row" :class="{'err': gh.diseaseCount > 10}">
+              <span>病害发现:</span> {{ gh.diseaseCount }}
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
   </div>
 </template>
 
 <style scoped lang="scss">
-.home-page {
+.home-view {
+  padding: 24px;
+  background: transparent;
+  min-height: 100%;
+}
+
+/* 1. Metrics */
+.metrics-row {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 20px;
+  margin-bottom: 24px;
+}
+
+.metric-card {
+  background: rgba(255, 255, 255, 0.7);
+  backdrop-filter: blur(12px);
+  border: 1px solid rgba(255, 255, 255, 0.5);
+  padding: 24px;
+  border-radius: 16px;
+  display: flex;
+  align-items: center;
+  gap: 20px;
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.03);
+  transition: transform 0.3s ease;
+
+  &:hover {
+    transform: translateY(-5px);
+    background: rgba(255, 255, 255, 0.85);
+  }
+
+  .ico-bg {
+    width: 56px;
+    height: 56px;
+    border-radius: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    i { font-size: 24px; color: #fff; }
+  }
+  .b-em { background: linear-gradient(135deg, #10B981, #059669); }
+  .b-bl { background: linear-gradient(135deg, #3B82F6, #2563EB); }
+  .b-or { background: linear-gradient(135deg, #F59E0B, #D97706); }
+  .b-pu { background: linear-gradient(135deg, #8B5CF6, #7C3AED); }
+
+  .m-content {
+    .v { font-size: 26px; font-weight: 800; color: #1e293b; line-height: 1; margin-bottom: 4px; }
+    .l { font-size: 13px; color: #64748b; font-weight: 500; }
+  }
+}
+
+/* 2. Layout Grid */
+.main-grid {
+  display: grid;
+  grid-template-columns: 2fr 1fr;
+  gap: 20px;
+  margin-bottom: 24px;
+}
+
+.glass-card {
+  background: rgba(255, 255, 255, 0.7) !important;
+  backdrop-filter: blur(12px);
+  border-radius: 16px !important;
+  border: 1px solid rgba(255, 255, 255, 0.5) !important;
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.03) !important;
+
+  :deep(.el-card__header) {
+    border-bottom: 1px solid rgba(0,0,0,0.05);
+    padding: 16px 20px;
+  }
+}
+
+.c-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  h4 { margin: 0; font-size: 15px; font-weight: 700; color: #1e293b; }
+}
+
+.dot-green { width: 8px; height: 8px; background: #10B981; border-radius: 50%; }
+
+/* Notice */
+.n-body { font-size: 14px; line-height: 1.8; color: #475569; padding: 4px 0; }
+
+/* Weather */
+.w-body {
+  .w-main {
+    display: flex;
+    align-items: flex-end;
+    gap: 16px;
+    margin-bottom: 20px;
+    .temp { font-size: 42px; font-weight: 800; color: #10B981; line-height: 1; }
+    .w-status {
+      .txt { font-size: 16px; font-weight: 700; color: #1e293b; }
+      .day { font-size: 12px; color: #94a3b8; }
+    }
+  }
+  .w-grid {
+    display: flex;
+    gap: 24px;
+    margin-bottom: 16px;
+    padding: 12px;
+    background: rgba(16,185,129,0.05);
+    border-radius: 12px;
+    .wi { font-size: 13px; color: #475569; span { color: #94a3b8; margin-right: 4px; } }
+  }
+  .w-notice { font-size: 12px; color: #64748b; background: #f8fafc; padding: 10px; border-radius: 8px; border: 1px solid rgba(0,0,0,0.02); }
+}
+
+/* App Entry */
+.app-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 12px;
+  .ai {
+    background: #f8fafc;
+    border: 1px solid #f1f5f9;
+    padding: 16px;
+    border-radius: 12px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    
+    &:hover { background: #fff; border-color: #10B981; transform: translateY(-3px); box-shadow: 0 4px 10px rgba(16,185,129,0.1); }
+    
+    .ai-box {
+      width: 44px; height: 44px; border-radius: 10px; margin-bottom: 8px;
+      display: flex; align-items: center; justify-content: center;
+      i { font-size: 20px; color: #fff; }
+    }
+    span { font-size: 13px; font-weight: 600; color: #475569; }
+  }
+}
+
+/* Links */
+.links-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  .l-item {
+    font-size: 13px; color: #64748b; text-decoration: none;
+    display: flex; justify-content: space-between; align-items: center;
+    padding: 8px 12px; border-radius: 8px; background: #f8fafc;
+    transition: color 0.2s;
+    &:hover { color: #10B981; background: rgba(16,185,129,0.05); }
+    i { font-size: 12px; opacity: 0.5; }
+  }
+}
+
+/* 4. Charts */
+.charts-row {
+  display: grid;
+  grid-template-columns: 1fr 2fr;
+  gap: 20px;
+  margin-bottom: 32px;
+  .chart-box { width: 100%; height: 320px; }
+}
+
+/* 5. Greenhouse */
+.section-title {
+  display: flex; align-items: center; gap: 12px; margin-bottom: 20px;
+  .v-line { width: 4px; height: 20px; background: #10B981; border-radius: 2px; }
+  h3 { margin: 0; font-size: 18px; font-weight: 800; color: #1e293b; letter-spacing: -0.01em; }
+}
+
+.gh-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 16px;
+}
+
+.gh-card {
+  background: rgba(255, 255, 255, 0.7);
+  backdrop-filter: blur(12px);
+  border-radius: 16px;
   padding: 20px;
-  background-color: #f5f7fa;
-  min-height: 100vh;
+  border: 1px solid rgba(255, 255, 255, 0.5);
+  transition: all 0.3s ease;
+  &:hover { background: rgba(255, 255, 255, 0.9); transform: translateY(-4px); }
 
-  .top-section {
-    display: grid;
-    grid-template-columns: 1fr 1fr 1fr;
-    gap: 16px;
-    margin-bottom: 16px;
-
-    @media (max-width: 1200px) {
-      grid-template-columns: 1fr;
-    }
-
-    .notice-card, .weather-card, .quick-apps-card {
-      background: #fff;
-      border-radius: 4px;
-      
-      :deep(.el-card__header) {
-        padding: 12px 16px;
-        border-bottom: 1px solid #ebeef5;
-      }
-
-      :deep(.el-card__body) {
-        padding: 16px;
-      }
-
-      .card-header {
-        font-size: 16px;
-        font-weight: 600;
-        color: #1f2f3d;
-      }
-    }
-
-    .notice-card {
-      .notice-content {
-        font-size: 14px;
-        font-weight: 500;
-        color: #606266;
-        line-height: 1.8;
-      }
-    }
-
-    .quick-apps-card {      
-      .apps-grid {
-        display: grid;
-        grid-template-columns: repeat(2, 1fr);
-        gap: 12px;
-        padding: 8px;
-
-        .app-item {
-          display: flex;
-          flex-direction: row;
-          align-items: center;
-          justify-content: flex-start;
-          background: #f5f7fa;
-          padding: 16px;
-          border-radius: 4px;
-          cursor: pointer;
-          transition: all 0.2s ease;
-
-          .app-icon {
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            margin-right: 8px;
-
-            i {
-              font-size: 20px;
-              color: #409EFF;
-            }
-          }
-
-          span {
-            color: #606266;
-            font-size: 15px;
-            font-weight: 500;
-          }
-
-          &:hover {
-            background: #ecf5ff;
-            
-            .app-icon i {
-              color: #409EFF;
-            }
-            
-            span {
-              color: #409EFF;
-            }
-          }
-        }
-      }
-    }
-
-    .weather-card {
-      .weather-info {
-        .weather-header {
-          font-size: 15px;
-          font-weight: 500;
-          color: #606266;
-          margin-bottom: 12px;
-        }
-
-        .weather-details {
-          margin-bottom: 12px;
-
-          .weather-item {
-            font-size: 14px;
-            font-weight: 500;
-            color: #606266;
-            margin-bottom: 8px;
-            display: flex;
-            align-items: center;
-            
-            &:before {
-              content: '•';
-              color: #409EFF;
-              margin-right: 6px;
-            }
-          }
-        }
-
-        .weather-notice {
-          font-size: 13px;
-          font-weight: 500;
-          color: #909399;
-          line-height: 2;
-          background: #f5f7fa;
-          padding: 8px 12px;
-          border-radius: 4px;
-        }
-      }
+  .gh-head {
+    display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;
+    .name { font-weight: 700; color: #1e293b; font-size: 15px; }
+  }
+  .gh-body {
+    .row {
+      font-size: 13px; color: #64748b; margin-bottom: 8px;
+      display: flex; justify-content: space-between;
+      span { color: #94a3b8; }
+      strong { color: #1e293b; }
+      &.err { color: #ef4444; font-weight: 700; }
     }
   }
+}
 
-  .statistics-row {
-    display: grid;
-    grid-template-columns: repeat(4, 1fr);
-    gap: 16px;
-    margin-bottom: 16px;
+@media (max-width: 1400px) {
+  .gh-grid { grid-template-columns: repeat(2, 1fr); }
+}
 
-    .stat-item {
-      background: white;
-      padding: 20px;
-      border-radius: 4px;
-      display: flex;
-      align-items: center;
-      gap: 12px;
-      box-shadow: 0 2px 11px 0 rgba(0, 0, 0, 0.1);
-
-
-      i {
-        font-size: 24px;
-        color: #409EFF;
-        background: #ecf5ff;
-        padding: 12px;
-        border-radius: 8px;
-        transition: all 0.3s ease;
-      }
-
-      .stat-info {
-        .stat-value {
-          font-size: 24px;
-          font-weight: 600;
-          color: #303133;
-          margin-bottom: 8px;
-        }
-
-        .stat-label {
-          font-size: 15px;
-          font-weight: 500;
-          color: #909399;
-        }
-      }
-    }
-  }
-
-  .charts-container {
-    .content-row {
-      display: grid;
-      grid-template-columns: 2fr 1fr;
-      gap: 16px;
-    }
-
-    .chart-card, .crop-info-card, .links-card {
-      background: #fff;
-      border-radius: 4px;
-
-      :deep(.el-card__header) {
-        padding: 12px 16px;
-        border-bottom: 1px solid #ebeef5;
-      }
-
-      :deep(.el-card__body) {
-        padding: 16px;
-      }
-
-      .card-header {
-        font-size: 16px;
-        font-weight: 600;
-        color: #1f2f3d;
-      }
-    }
-
-    .crop-grid {
-      display: grid;
-      grid-template-columns: repeat(3, 1fr);
-      gap: 12px;
-      padding: 12px;
-
-      .crop-item {
-        background: #f5f7fa;
-        border-radius: 4px;
-        padding: 8px;
-
-        .crop-header {
-          font-size: 14px;
-          font-weight: 600;
-          color: #303133;
-          margin-bottom: 4px;
-        }
-
-        .crop-content {
-          .crop-type {
-            font-size: 13px;
-            color: #606266;
-            margin-bottom: 2px;
-          }
-
-          .crop-numbers {
-            display: flex;
-            flex-direction: row;
-            justify-content: space-between;
-            gap: 8px;
-            margin-bottom: 2px;
-            font-size: 13px;
-            
-            .plant-count {
-              color: #67c23a;
-            }
-            
-            .disease-count {
-              color: #f56c6c;
-            }
-          }
-
-          .crop-status {
-            font-size: 13px;
-            color: #67c23a;
-            margin-top: 2px;
-
-            &.warning {
-              color: #e6a23c;
-            }
-          }
-        }
-      }
-    }
-
-    .links-grid {
-      display: grid;
-      grid-template-columns: repeat(2, 1fr);
-      gap: 12px;
-      padding: 8px;
-
-      .link-item {
-        display: flex;
-        flex-direction: row;
-        align-items: center;
-        justify-content: flex-start;
-        background: #f5f7fa;
-        padding: 16px;
-        border-radius: 4px;
-        cursor: pointer;
-        transition: all 0.2s ease;
-        text-decoration: none;
-
-        i {
-          font-size: 20px;
-          color: #409EFF;
-          margin-right: 8px;
-        }
-
-        span {
-          color: #606266;
-          font-size: 15px;
-          font-weight: 500;
-        }
-
-        &:hover {
-          background: #ecf5ff;
-          
-          i {
-            color: #409EFF;
-          }
-          
-          span {
-            color: #409EFF;
-          }
-        }
-      }
-    }
-  }
+@media (max-width: 1024px) {
+  .metrics-row { grid-template-columns: repeat(2, 1fr); }
+  .main-grid { grid-template-columns: 1fr; }
+  .charts-row { grid-template-columns: 1fr; }
+  .gh-grid { grid-template-columns: 1fr; }
 }
 </style>

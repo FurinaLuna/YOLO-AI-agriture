@@ -1,70 +1,79 @@
 <template>
-	<div class="system-role-container layout-padding">
-		<div class="system-role-padding layout-padding-auto layout-padding-view">
-			<div class="system-user-search mb15">
-				<el-input v-model="state.tableData.param.name" size="default" placeholder="请输入病害名称" clearable style="width: 180px"> </el-input>
-				<el-select v-model="state.tableData.param.cropType" size="default" class="ml10" placeholder="请选择作物类型" clearable style="width: 180px">
-					<el-option v-for="item in state.cropTypes" :key="item" :label="item" :value="item"></el-option>
-				</el-select>
-				<el-button size="default" type="primary" class="ml10" @click="getTableData()">
-					<el-icon>
-						<ele-Search />
-					</el-icon>
-					查询
-				</el-button>
-				<el-button size="default" type="success" class="ml10" @click="onOpenAddDisease('add')">
-					<el-icon>
-						<ele-FolderAdd />
-					</el-icon>
-					添加
-				</el-button>
+	<div class="system-role-container">
+		<el-card shadow="never" class="glass-card mb-4">
+			<!-- 顶部搜索域 -->
+			<div class="search-header">
+				<div class="search-inputs">
+					<el-input v-model="state.tableData.param.name" placeholder="搜索病害名称..." clearable class="custom-input"> 
+						<template #prefix><el-icon><Search /></el-icon></template>
+					</el-input>
+					<el-select v-model="state.tableData.param.cropType" placeholder="作物分类" clearable class="custom-select">
+						<el-option v-for="item in state.cropTypes" :key="item" :label="item" :value="item"></el-option>
+					</el-select>
+				</div>
+				<div class="search-actions">
+					<el-button type="primary" @click="getTableData()" :loading="state.tableData.loading" class="action-btn query-btn">
+						查询
+					</el-button>
+					<el-button type="success" @click="onOpenAddDisease('add')" class="action-btn add-btn">
+						<el-icon class="mr-1"><Plus /></el-icon> 新增记录
+					</el-button>
+				</div>
 			</div>
-			<el-table :data="state.tableData.data" v-loading="state.tableData.loading" style="width: 100%">
-				<el-table-column prop="num" label="序号" width="80" align="center" />
-				<el-table-column prop="cropType" label="作物类型" show-overflow-tooltip width="80" align="center" />
-				<el-table-column prop="name" label="病害名称" show-overflow-tooltip width="150" align="center" />
-				<el-table-column prop="symptoms" label="病害症状" show-overflow-tooltip min-width="200" align="center"/>
-				<el-table-column prop="causes" label="发病原因" show-overflow-tooltip min-width="200" align="center"/>
-				<el-table-column prop="prevention" label="防治方法" show-overflow-tooltip min-width="200" align="center"/>
-				<el-table-column label="图片" width="100" align="center">
-					<template #default="scope">
-						<el-image 
-							style="width: 35px; height: 35px" 
-							:src="scope.row.image" 
-							:preview-src-list="[scope.row.image]"
-							:preview-teleported="true"
-							:hide-on-click-modal="true"
-							fit="cover"
-							:preview-options="{
-								zoom: false,
-								closeOnPressEscape: true,
-								toolbar: false
-							}"
-						/>
-					</template>
-				</el-table-column>
-				<el-table-column label="操作" width="150" fixed="right" align="center">
-					<template #default="scope">
-						<el-button size="small" text type="primary" @click="onOpenDetail(scope.row)">详情</el-button>
-						<el-button size="small" text type="primary" @click="onOpenEditDisease('edit', scope.row)">修改</el-button>
-						<el-button size="small" text type="primary" @click="onRowDel(scope.row)">删除</el-button>
-					</template>
-				</el-table-column>
-			</el-table>
-			<el-pagination
-				@size-change="onHandleSizeChange"
-				@current-change="onHandleCurrentChange"
-				class="mt15"
-				:pager-count="5"
-				:page-sizes="[10, 20, 30]"
-				v-model:current-page="state.tableData.param.pageNum"
-				background
-				v-model:page-size="state.tableData.param.pageSize"
-				layout="total, sizes, prev, pager, next, jumper"
-				:total="state.tableData.total"
-			>
-			</el-pagination>
-		</div>
+
+			<!-- 数据容器 -->
+			<div class="table-wrapper">
+				<el-table 
+					:data="state.tableData.data" 
+					v-loading="state.tableData.loading" 
+					class="custom-table"
+				>
+					<el-table-column prop="num" label="#" width="60" align="center" />
+					<el-table-column prop="cropType" label="作物" width="100">
+						<template #default="scope">
+							<el-tag size="small" effect="plain" type="success" class="brand-tag">{{ scope.row.cropType }}</el-tag>
+						</template>
+					</el-table-column>
+					<el-table-column prop="name" label="病害名称" width="160" />
+					<el-table-column prop="symptoms" label="典型症状" show-overflow-tooltip min-width="200" />
+					<el-table-column prop="causes" label="发病诱因" show-overflow-tooltip min-width="180" />
+					<el-table-column prop="prevention" label="防治方案" show-overflow-tooltip min-width="200" />
+					<el-table-column label="图谱" width="80" align="center">
+						<template #default="scope">
+							<el-image 
+								class="table-img"
+								:src="scope.row.image" 
+								:preview-src-list="[scope.row.image]"
+								:preview-teleported="true"
+								fit="cover"
+							/>
+						</template>
+					</el-table-column>
+					<el-table-column label="操作" width="160" fixed="right" align="right">
+						<template #default="scope">
+							<el-button link type="primary" @click="onOpenDetail(scope.row)">详情</el-button>
+							<el-button link type="primary" @click="onOpenEditDisease('edit', scope.row)">编辑</el-button>
+							<el-button link type="danger" @click="onRowDel(scope.row)">删除</el-button>
+						</template>
+					</el-table-column>
+				</el-table>
+
+				<div class="pagination-footer mt-4">
+					<el-pagination
+						@size-change="onHandleSizeChange"
+						@current-change="onHandleCurrentChange"
+						:pager-count="5"
+						:page-sizes="[10, 20, 50]"
+						v-model:current-page="state.tableData.param.pageNum"
+						background
+						v-model:page-size="state.tableData.param.pageSize"
+						layout="total, sizes, prev, pager, next"
+						:total="state.tableData.total"
+					/>
+				</div>
+			</div>
+		</el-card>
+
 		<DiseaseDialog ref="diseaseDialogRef" @refresh="getTableData()" />
 		<DiseaseDetail ref="diseaseDetailRef" />
 	</div>
@@ -74,6 +83,7 @@
 import { defineAsyncComponent, reactive, onMounted, ref } from 'vue';
 import { ElMessageBox, ElMessage } from 'element-plus';
 import request from '/@/utils/request';
+import { Search, Plus } from '@element-plus/icons-vue';
 
 // 引入组件
 const DiseaseDialog = defineAsyncComponent(() => import('./dialog.vue'));
@@ -94,130 +104,161 @@ const state = reactive({
 			pageSize: 10,
 		},
 	},
-	cropTypes: ['玉米', '水稻', '小麦', '马铃薯', '棉花', '苹果', '葡萄', '番茄', '草莓'] // 作物类型选项
+	cropTypes: ['玉米', '水稻', '小麦', '马铃薯', '棉花', '苹果', '葡萄', '番茄', '草莓']
 });
 
 // 获取表格数据
 const getTableData = () => {
 	state.tableData.loading = true;
-	request
-		.get('/api/disease', {
-			params: state.tableData.param,
-		})
-		.then((res) => {
-			if (res.code == 0) {
-				state.tableData.data = [];
-				setTimeout(() => {
-					state.tableData.loading = false;
-				}, 500);
-				for (let i = 0; i < res.data.records.length; i++) {
-					state.tableData.data[i] = res.data.records[i];
-					state.tableData.data[i]['num'] = i + 1;
-				}
-				state.tableData.total = res.data.total;
-			} else {
-				ElMessage({
-					type: 'error',
-					message: res.msg,
-				});
-			}
-		});
+	request.get('/api/disease', { params: state.tableData.param }).then((res) => {
+		if (res.code == 0) {
+			state.tableData.data = res.data.records.map((item: any, index: number) => ({
+				...item,
+				num: (state.tableData.param.pageNum - 1) * state.tableData.param.pageSize + index + 1
+			}));
+			state.tableData.total = res.data.total;
+			setTimeout(() => { state.tableData.loading = false; }, 300);
+		} else {
+			state.tableData.loading = false;
+			ElMessage.error(res.msg);
+		}
+	});
 };
 
-// 打开新增病害弹窗
-const onOpenAddDisease = (type: string) => {
-	diseaseDialogRef.value.openDialog(type);
-};
+const onOpenAddDisease = (type: string) => diseaseDialogRef.value.openDialog(type);
+const onOpenEditDisease = (type: string, row: Object) => diseaseDialogRef.value.openDialog(type, row);
+const onOpenDetail = (row: any) => diseaseDetailRef.value.openDialog(row);
 
-// 打开修改病害弹窗
-const onOpenEditDisease = (type: string, row: Object) => {
-	diseaseDialogRef.value.openDialog(type, row);
-};
-
-// 打开详情弹窗
-const onOpenDetail = (row: any) => {
-	diseaseDetailRef.value.openDialog(row);
-};
-
-// 删除病害
 const onRowDel = (row: any) => {
+	if (state.tableData.loading) return;
 	ElMessageBox.confirm(`此操作将永久删除该病害信息，是否继续?`, '提示', {
+		type: 'warning',
 		confirmButtonText: '确认',
 		cancelButtonText: '取消',
-		type: 'warning',
-	})
-		.then(() => {
-			request.delete('/api/disease/' + row.id).then((res) => {
-				if (res.code == 0) {
-					ElMessage({
-						type: 'success',
-						message: '删除成功！',
-					});
-					setTimeout(() => {
-						getTableData();
-					}, 500);
-				} else {
-					ElMessage({
-						type: 'error',
-						message: res.msg,
-					});
-				}
-			});
-		})
-		.catch(() => {});
+	}).then(() => {
+		request.delete('/api/disease/' + row.id).then((res) => {
+			if (res.code == 0) {
+				ElMessage.success('删除成功！');
+				getTableData();
+			} else {
+				ElMessage.error(res.msg);
+			}
+		});
+	}).catch(() => {});
 };
 
-// 分页改变
 const onHandleSizeChange = (val: number) => {
 	state.tableData.param.pageSize = val;
 	getTableData();
 };
-
-// 分页改变
 const onHandleCurrentChange = (val: number) => {
 	state.tableData.param.pageNum = val;
 	getTableData();
 };
 
-// 页面加载时
-onMounted(() => {
-	getTableData();
-});
+onMounted(() => getTableData());
 </script>
 
 <style scoped lang="scss">
 .system-role-container {
-	.system-role-padding {
-		padding: 15px;
-		.el-table {
-			flex: 1;
-			:deep(.el-table__row) {
-				height: 40px;  // 设置行高
-			}
-			:deep(.el-table__header) {
-				th {
-					padding: 6px 0;  // 减小表头padding
-				}
-			}
-			:deep(.el-table__cell) {
-				padding: 3px 0;  // 减小单元格padding
-			}
-			:deep(.cell) {
-				line-height: 1.3;  // 减小文字行高
-			}
-		}
-		:deep(.el-input) {
-			height: 32px;
-			line-height: 32px;
-		}
-		:deep(.el-select) {
-			height: 32px;
-			line-height: 32px;
-			.el-input {
-				height: 32px;
-				line-height: 32px;
-			}
-		}
+	padding: 20px;
+	height: 100%;
+	background: transparent;
+
+	.glass-card {
+		background: rgba(255, 255, 255, 0.7);
+		backdrop-filter: blur(12px);
+		border-radius: 16px;
+		border: 1px solid rgba(255, 255, 255, 0.5);
+		box-shadow: 0 4px 15px rgba(0, 0, 0, 0.03);
+		padding: 20px;
 	}
 }
-</style> 
+
+.search-header {
+	display: flex;
+	justify-content: space-between;
+	align-items: center;
+	margin-bottom: 24px;
+	gap: 20px;
+
+	.search-inputs {
+		display: flex;
+		gap: 12px;
+		.custom-input { width: 220px; }
+		.custom-select { width: 140px; }
+
+		:deep(.el-input__wrapper) {
+			border-radius: 8px;
+			background: rgba(255, 255, 255, 0.5);
+			box-shadow: 0 0 0 1px rgba(0,0,0,0.05) inset;
+			&:hover { box-shadow: 0 0 0 1px #10B981 inset; }
+			&.is-focus { box-shadow: 0 0 0 1px #10B981 inset !important; }
+		}
+	}
+
+	.search-actions {
+		display: flex;
+		gap: 10px;
+	}
+}
+
+.action-btn {
+	border-radius: 8px;
+	padding: 8px 16px;
+	font-weight: 600;
+	transition: all 0.2s;
+	&:hover { transform: translateY(-2px); }
+}
+
+.query-btn {
+	background: linear-gradient(135deg, #3B82F6, #2563EB) !important;
+	border: none !important;
+}
+
+.add-btn {
+	background: linear-gradient(135deg, #10B981, #059669) !important;
+	border: none !important;
+}
+
+.table-wrapper {
+	background: rgba(255, 255, 255, 0.4);
+	border-radius: 12px;
+	padding: 10px;
+	border: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+.custom-table {
+	background: transparent !important;
+	--el-table-bg-color: transparent;
+	--el-table-tr-bg-color: transparent;
+	--el-table-header-bg-color: rgba(248, 250, 252, 0.8);
+
+	:deep(.el-table__header) th {
+		font-weight: 700;
+		color: #1e293b;
+		background: transparent !important;
+		padding: 12px 0;
+	}
+
+	:deep(.el-table__row) {
+		transition: all 0.2s;
+		&:hover td { background-color: rgba(16, 185, 129, 0.05) !important; }
+	}
+
+	.table-img {
+		width: 40px; height: 40px; border-radius: 8px;
+		box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+	}
+
+	.brand-tag {
+		border-radius: 4px;
+		font-weight: 600;
+	}
+}
+
+.pagination-footer {
+	display: flex;
+	justify-content: flex-end;
+}
+</style>

@@ -1,68 +1,79 @@
 <template>
-	<div class="system-role-container layout-padding">
-		<div class="system-role-padding layout-padding-auto layout-padding-view">
-			<div class="system-user-search mb15">
-				<el-input v-model="state.tableData.param.search" size="default" placeholder="请输入产品名称" style="max-width: 180px"> </el-input>
-				<el-input v-model="state.tableData.param.supplier" size="default" placeholder="请输入供货商" class="ml10" style="max-width: 180px"> </el-input>
-				<el-input v-model="state.tableData.param.region" size="default" placeholder="请输入地区" class="ml10" style="max-width: 180px"> </el-input>
-				<el-input v-model="state.tableData.param.manager" size="default" placeholder="请输入采购人" class="ml10" style="max-width: 180px"> </el-input>
-				<el-button size="default" type="primary" class="ml10" @click="getTableData()">
-					<el-icon>
-						<ele-Search />
-					</el-icon>
-					查询
-				</el-button>
-				<el-button size="default" type="success" class="ml10" @click="onOpenAddPurchase('add')">
-					<el-icon>
-						<ele-FolderAdd />
-					</el-icon>
-					添加
-				</el-button>
+	<div class="system-role-container">
+		<el-card shadow="never" class="glass-card mb-4">
+			<!-- 顶部搜索域 -->
+			<div class="search-header">
+				<div class="search-inputs">
+					<el-input v-model="state.tableData.param.search" placeholder="产品名称..." clearable class="custom-input ml-2" />
+					<el-input v-model="state.tableData.param.supplier" placeholder="供货商..." clearable class="custom-input ml-2" />
+					<el-input v-model="state.tableData.param.manager" placeholder="采购员..." clearable class="custom-input ml-2" />
+				</div>
+				<div class="search-actions">
+					<el-button type="primary" @click="getTableData" :loading="state.tableData.loading" class="action-btn query-btn">
+						执行查询
+					</el-button>
+					<el-button type="success" @click="onOpenAddPurchase('add')" class="action-btn add-btn">
+						<el-icon class="mr-1"><Plus /></el-icon> 新增单据
+					</el-button>
+				</div>
 			</div>
-			<el-table :data="state.tableData.data" v-loading="state.tableData.loading" style="width: 100%">
-				<el-table-column prop="num" label="序号" width="80" align="center" />
-				<el-table-column prop="productName" label="产品名称" show-overflow-tooltip width="120" align="center" />
-				<el-table-column prop="price" label="价格(元)" width="120" align="center" />
-				<el-table-column prop="quantity" label="采购数量" width="120" align="center" />
-				<el-table-column prop="supplier" label="供货商" show-overflow-tooltip width="120" align="center" />
-				<el-table-column prop="region" label="地区" show-overflow-tooltip width="120" align="center" />
-				<el-table-column prop="phone" label="电话" show-overflow-tooltip width="150" align="center" />
-				<el-table-column prop="manager" label="采购人" show-overflow-tooltip width="120" align="center" />
-				<el-table-column prop="remark" label="备注" show-overflow-tooltip width="150" align="center" />
-				<el-table-column label="操作" width="150" fixed="right" align="center">
-					<template #default="scope">
-						<el-button size="small" text type="primary" @click="onOpenEditPurchase('edit', scope.row)">修改</el-button>
-						<el-button size="small" text type="primary" @click="onRowDel(scope.row)">删除</el-button>
-					</template>
-				</el-table-column>
-			</el-table>
-			<el-pagination
-				@size-change="onHandleSizeChange"
-				@current-change="onHandleCurrentChange"
-				class="mt15"
-				:pager-count="5"
-				:page-sizes="[10, 20, 30]"
-				v-model:current-page="state.tableData.param.pageNum"
-				background
-				v-model:page-size="state.tableData.param.pageSize"
-				layout="total, sizes, prev, pager, next, jumper"
-				:total="state.tableData.total"
-			>
-			</el-pagination>
-		</div>
-		<PurchaseDialog ref="purchaseDialogRef" @refresh="getTableData()" />
+
+			<!-- 数据容器 -->
+			<div class="table-wrapper">
+				<el-table 
+					:data="state.tableData.data" 
+					v-loading="state.tableData.loading" 
+					class="custom-table"
+				>
+					<el-table-column prop="num" label="#" width="60" align="center" />
+					<el-table-column prop="productName" label="产品名称" show-overflow-tooltip width="150" />
+					<el-table-column prop="price" label="结算单价" width="120">
+						<template #default="scope">
+							<span class="text-orange-600 font-bold">¥{{ scope.row.price }}</span>
+						</template>
+					</el-table-column>
+					<el-table-column prop="quantity" label="采购数量" width="100" align="center" />
+					
+					<el-table-column prop="supplier" label="合作供货商" show-overflow-tooltip />
+					<el-table-column prop="region" label="所属地区" width="120" />
+					<el-table-column prop="manager" label="经办人" width="120" align="center" />
+					<el-table-column prop="phone" label="联系方式" width="140" />
+
+					<el-table-column label="操作" width="140" fixed="right" align="right">
+						<template #default="scope">
+							<el-button link type="primary" @click="onOpenEditPurchase('edit', scope.row)">修改</el-button>
+							<el-button link type="danger" @click="onRowDel(scope.row)">作废</el-button>
+						</template>
+					</el-table-column>
+				</el-table>
+
+				<div class="pagination-footer mt-4">
+					<el-pagination
+						@size-change="onHandleSizeChange"
+						@current-change="onHandleCurrentChange"
+						:pager-count="5"
+						:page-sizes="[10, 20, 50]"
+						v-model:current-page="state.tableData.param.pageNum"
+						background
+						v-model:page-size="state.tableData.param.pageSize"
+						layout="total, sizes, prev, pager, next"
+						:total="state.tableData.total"
+					/>
+				</div>
+			</div>
+		</el-card>
+
+		<PurchaseDialog ref="purchaseDialogRef" @refresh="getTableData" />
 	</div>
 </template>
 
-<script setup lang="ts" name="systemRole">
+<script setup lang="ts" name="purchaseManage">
 import { defineAsyncComponent, reactive, onMounted, ref } from 'vue';
 import { ElMessageBox, ElMessage } from 'element-plus';
 import request from '/@/utils/request';
+import { Search, Plus } from '@element-plus/icons-vue';
 
-// 引入组件
 const PurchaseDialog = defineAsyncComponent(() => import('./dialog.vue'));
-
-// 定义变量内容
 const purchaseDialogRef = ref();
 const state = reactive({
 	tableData: {
@@ -70,106 +81,99 @@ const state = reactive({
 		total: 0,
 		loading: false,
 		param: {
-			search: '',
-			supplier: '',
-			region: '',
-			manager: '',
-			pageNum: 1,
-			pageSize: 10,
+			search: '', supplier: '', region: '', manager: '',
+			pageNum: 1, pageSize: 10,
 		},
 	},
 });
 
-// 获取表格数据
 const getTableData = () => {
 	state.tableData.loading = true;
-	request
-		.get('/api/purchase', {
-			params: state.tableData.param,
-		})
-		.then((res) => {
+	request.get('/api/purchase', { params: state.tableData.param }).then((res) => {
+		if (res.code == 0) {
+			state.tableData.data = res.data.records.map((item: any, idx: number) => ({
+				...item,
+				num: (state.tableData.param.pageNum - 1) * state.tableData.param.pageSize + idx + 1
+			}));
+			state.tableData.total = res.data.total;
+			state.tableData.loading = false;
+		}
+	});
+};
+
+const onOpenAddPurchase = (type: string) => purchaseDialogRef.value.openDialog(type);
+const onOpenEditPurchase = (type: string, row: Object) => purchaseDialogRef.value.openDialog(type, row);
+
+const onRowDel = (row: any) => {
+	ElMessageBox.confirm(`确认作废该采购单据？`, '警告', { type: 'warning' }).then(() => {
+		request.delete('/api/purchase/' + row.id).then((res) => {
 			if (res.code == 0) {
-				state.tableData.data = [];
-				setTimeout(() => {
-					state.tableData.loading = false;
-				}, 500);
-				for (let i = 0; i < res.data.records.length; i++) {
-					state.tableData.data[i] = res.data.records[i];
-					state.tableData.data[i]['num'] = i + 1;
-				}
-				state.tableData.total = res.data.total;
-			} else {
-				ElMessage({
-					type: 'error',
-					message: res.msg,
-				});
+				ElMessage.success('单据已作废');
+				getTableData();
 			}
 		});
+	}).catch(() => {});
 };
 
-// 打开新增采购弹窗
-const onOpenAddPurchase = (type: string) => {
-	purchaseDialogRef.value.openDialog(type);
-};
+const onHandleSizeChange = (val: number) => { state.tableData.param.pageSize = val; getTableData(); };
+const onHandleCurrentChange = (val: number) => { state.tableData.param.pageNum = val; getTableData(); };
 
-// 打开修改采购弹窗
-const onOpenEditPurchase = (type: string, row: Object) => {
-	purchaseDialogRef.value.openDialog(type, row);
-};
-
-// 删除采购
-const onRowDel = (row: any) => {
-	ElMessageBox.confirm(`此操作将永久删除该采购信息，是否继续?`, '提示', {
-		confirmButtonText: '确认',
-		cancelButtonText: '取消',
-		type: 'warning',
-	})
-		.then(() => {
-			request.delete('/api/purchase/' + row.id).then((res) => {
-				if (res.code == 0) {
-					ElMessage({
-						type: 'success',
-						message: '删除成功！',
-					});
-					setTimeout(() => {
-						getTableData();
-					}, 500);
-				} else {
-					ElMessage({
-						type: 'error',
-						message: res.msg,
-					});
-				}
-			});
-		})
-		.catch(() => {});
-};
-
-// 分页改变
-const onHandleSizeChange = (val: number) => {
-	state.tableData.param.pageSize = val;
-	getTableData();
-};
-
-// 分页改变
-const onHandleCurrentChange = (val: number) => {
-	state.tableData.param.pageNum = val;
-	getTableData();
-};
-
-// 页面加载时
-onMounted(() => {
-	getTableData();
-});
+onMounted(() => getTableData());
 </script>
 
 <style scoped lang="scss">
 .system-role-container {
-	.system-role-padding {
-		padding: 15px;
-		.el-table {
-			flex: 1;
-		}
+	padding: 20px;
+	.glass-card {
+		background: rgba(255, 255, 255, 0.7);
+		backdrop-filter: blur(12px);
+		border-radius: 16px;
+		border: 1px solid rgba(255, 255, 255, 0.5);
+		padding: 20px;
 	}
 }
-</style> 
+
+.search-header {
+	display: flex;
+	justify-content: space-between;
+	align-items: center;
+	margin-bottom: 24px;
+
+	.search-inputs {
+		display: flex;
+		.custom-input { width: 160px; margin-right: 10px; }
+		:deep(.el-input__wrapper) { border-radius: 8px; background: rgba(255, 255, 255, 0.5); }
+	}
+}
+
+.action-btn { border-radius: 8px; font-weight: 600; }
+.query-btn { background: linear-gradient(135deg, #3B82F6, #2563EB) !important; border: none !important; }
+.add-btn { background: linear-gradient(135deg, #10B981, #059669) !important; border: none !important; }
+
+.table-wrapper {
+	background: rgba(255, 255, 255, 0.4);
+	border-radius: 12px;
+	padding: 10px;
+	border: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+.custom-table {
+	background: transparent !important;
+	--el-table-bg-color: transparent;
+	--el-table-tr-bg-color: transparent;
+
+	:deep(.el-table__header) th {
+		font-weight: 700;
+		color: #1e293b;
+		background: transparent !important;
+		padding: 12px 0;
+	}
+
+	:deep(.el-table__row) {
+		height: 60px;
+		&:hover td { background-color: rgba(16, 185, 129, 0.05) !important; }
+	}
+}
+
+.pagination-footer { display: flex; justify-content: flex-end; }
+</style>

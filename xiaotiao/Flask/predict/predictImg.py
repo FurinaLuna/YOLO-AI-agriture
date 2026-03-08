@@ -17,7 +17,7 @@ class ImagePredictor:
         :param conf: 置信度阈值
         """
         self.model = YOLO(weights_path)
-        self.conf = 0.1
+        self.conf = conf
         self.img_path = img_path
         self.save_path = save_path
         self.kind = {
@@ -42,20 +42,6 @@ class ImagePredictor:
         }
         self.labels = self.kind[kind]
 
-    def map_confidence(self, original_conf):
-        """
-        将原始置信度（0-1）映射到90%-99.99%区间
-        :param original_conf: 原始置信度（0-1之间）
-        :return: 映射后的置信度（0.90-0.9999之间）
-        """
-        # 确保输入在0-1之间
-        original_conf = max(0, min(1, float(original_conf)))
-
-        # 线性映射到新区间
-        mapped_conf = 0.90 + (original_conf * 0.0999)
-
-        return mapped_conf
-
     def predict(self):
         """
         预测图像并保存结果
@@ -63,7 +49,7 @@ class ImagePredictor:
         start_time = time.time()  # 开始计时
 
         # 执行预测
-        results = self.model(source=self.img_path, conf=self.conf, half=True, save_conf=True)
+        results = self.model(source=self.img_path, conf=self.conf, half=True, save_conf=True, agnostic_nms=True)
 
         end_time = time.time()  # 结束计时
         elapsed_time = end_time - start_time  # 计算用时
@@ -77,10 +63,10 @@ class ImagePredictor:
         try:
             # 检查是否有检测结果
             if len(results) == 0:
-                print("未检测到目标，请换一张图片。")
+                print("未检测到目标，请尝试降低置信度。")
                 all_results = {
-                    'labels': '预测失败',  # 存储所有标签
-                    'confidences': "0.00%",  # 存储所有置信度
+                    'labels': '未检测到目标',  # 明确告知是没检测到
+                    'confidences': "0.00%",
                     'allTime': f"{elapsed_time:.3f}秒"
                 }
                 return all_results
@@ -92,10 +78,10 @@ class ImagePredictor:
 
                 # 检查 confidences 和 labels 是否为空
                 if confidences.numel() == 0 or labels.numel() == 0:
-                    print("未检测到目标，请换一张图片。")
+                    print("当前置信度下未检测到目标。")
                     all_results = {
-                        'labels': '预测失败',  # 存储所有标签
-                        'confidences': "0.00%",  # 存储所有置信度
+                        'labels': '未检测到目标',
+                        'confidences': "0.00%",
                         'allTime': f"{elapsed_time:.3f}秒"
                     }
                     return all_results
@@ -103,10 +89,9 @@ class ImagePredictor:
                 # 获取标签名称和对应置信度
                 label_names = [self.labels[int(cls)] for cls in labels]
                 
-                # 映射置信度并更新标签显示
+                # 直接使用实际置信度并更新标签显示
                 for i, (label, conf) in enumerate(zip(label_names, confidences)):
-                    mapped_conf = self.map_confidence(conf)
-                    conf_str = f"{mapped_conf*100:.2f}%"
+                    conf_str = f"{float(conf)*100:.2f}%"
                     all_results['labels'].append(label)
                     all_results['confidences'].append(conf_str)
 

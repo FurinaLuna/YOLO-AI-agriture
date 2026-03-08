@@ -3,7 +3,8 @@ import os
 import subprocess
 import cv2
 import requests
-from flask import Flask, Response, request
+import uuid
+from flask import Flask, Response, request, jsonify
 from ultralytics import YOLO
 from predict import predictImg
 from flask_socketio import SocketIO, emit
@@ -57,69 +58,109 @@ class VideoProcessingApp:
     def predictImg(self):
         """图片预测接口"""
         data = request.get_json()
-        print(data)
-        self.data.clear()
-        self.data.update({
-            "username": data['username'], "weight": data['weight'],
-            "conf": data['conf'], "startTime": data['startTime'],
+        print(f"收到图片预测请求: {data}")
+        
+        # 使用局部变量存储，避免共享状态冲突
+        current_params = {
+            "username": data['username'],
+            "weight": data['weight'],
+            "conf": data['conf'],
+            "startTime": data['startTime'],
             "inputImg": data['inputImg'],
             "kind": data['kind']
-        })
-        print(self.data)
-        predict = predictImg.ImagePredictor(weights_path=f'./weights/{self.data["weight"]}',
-                                            img_path=self.data["inputImg"], save_path='./runs/result.jpg', kind=self.data["kind"],
-                                            conf=float(self.data["conf"]))
+        }
+        
+        predict = predictImg.ImagePredictor(
+            weights_path=f'./weights/{current_params["weight"]}',
+            img_path=current_params["inputImg"],
+            save_path='./runs/result.jpg',
+            kind=current_params["kind"],
+            conf=float(current_params["conf"])
+        )
+        
         # 执行预测
         results = predict.predict()
         uploadedUrl = self.upload('./runs/result.jpg')
-        if results['labels'] != '预测失败':
-            self.data["status"] = 200
-            self.data["message"] = "预测成功"
-            self.data["outImg"] = uploadedUrl
-            self.data["allTime"] = results['allTime']
-            self.data["confidence"] = json.dumps(results['confidences'])
-            self.data["label"] = json.dumps(results['labels'])
+        
+        # 构造返回结果
+        response_data = current_params.copy()
+        
+        # 判断识别结果
+        is_empty = results['labels'] == '未检测到目标' or (isinstance(results['labels'], list) and len(results['labels']) == 0)
+        
+        if is_empty:
+            response_data.update({
+                "code": 1,
+                "message": "检测结果置信度低于当前设置的阈值，请调低滑动条后再试。"
+            })
+        elif results['labels'] != '预测失败':
+            response_data.update({
+                "code": 0,
+                "message": "预测成功",
+                "outImg": uploadedUrl,
+                "allTime": results['allTime'],
+                "confidence": json.dumps(results['confidences']),
+                "label": json.dumps(results['labels'])
+            })
         else:
-            self.data["status"] = 400
-            self.data["message"] = "该图片无法识别，请重新上传！"
-        path = self.data["inputImg"].split('/')[-1]
-        if os.path.exists('./' + path):
-            os.remove('./' + path)
-        return json.dumps(self.data, ensure_ascii=False)
+            response_data.update({
+                "code": 1,
+                "message": "识别异常，请更换图片。"
+            })
+            
+        # 清理
+        path = current_params["inputImg"].split('/')[-1]
+        if os.path.exists('./' + path): os.remove('./' + path)
+            
+        return jsonify(response_data)
 
     def predictVideo(self):
         """视频流处理接口"""
-        self.data.clear()
-        self.data.update({
-            "username": request.args.get('username'), "weight": request.args.get('weight'),
-            "conf": request.args.get('conf'), "startTime": request.args.get('startTime'),
+        # 生成唯一 ID，防止并发请求的文件冲突
+        request_id = str(uuid.uuid4())[:8]
+        
+        # 局部变量存储路径
+        local_paths = {
+            'download': f'./runs/video/download_{request_id}.mp4',
+            'video_output_avi': f'./runs/video/output_{request_id}.avi',
+            'video_output_mp4': f'./runs/video/output_{request_id}.mp4'
+        }
+        
+        params = {
+            "username": request.args.get('username'),
+            "weight": request.args.get('weight'),
+            "conf": request.args.get('conf'),
+            "startTime": request.args.get('startTime'),
             "inputVideo": request.args.get('inputVideo'),
             "kind": request.args.get('kind')
-        })
-        self.download(self.data["inputVideo"], self.paths['download'])
-        cap = cv2.VideoCapture(self.paths['download'])
+        }
+        
+        self.download(params["inputVideo"], local_paths['download'])
+        cap = cv2.VideoCapture(local_paths['download'])
         if not cap.isOpened():
             raise ValueError("无法打开视频文件")
         fps = int(cap.get(cv2.CAP_PROP_FPS))
-        print(fps)
+        print(f"[{request_id}] 视频FPS: {fps}")
 
         # 视频写入器
         video_writer = cv2.VideoWriter(
-            self.paths['video_output'],
+            local_paths['video_output_avi'],
             cv2.VideoWriter_fourcc(*'XVID'),
             fps,
             (640, 480)
         )
-        model = YOLO(f'./weights/{self.data["weight"]}')
+        model = YOLO(f'./weights/{params["weight"]}')
 
         def generate():
             try:
+                current_conf = float(params['conf'])
                 while cap.isOpened():
                     ret, frame = cap.read()
                     if not ret:
                         break
                     frame = cv2.resize(frame, (640, 480))
-                    results = model.predict(source=frame, conf=float(self.data['conf']), show=False)
+                    # 使用当前请求的置信度
+                    results = model.predict(source=frame, conf=current_conf, show=False, agnostic_nms=True)
                     processed_frame = results[0].plot()
                     video_writer.write(processed_frame)
                     _, jpeg = cv2.imencode('.jpg', processed_frame)
@@ -127,38 +168,51 @@ class VideoProcessingApp:
             finally:
                 self.cleanup_resources(cap, video_writer)
                 self.socketio.emit('message', {'data': '处理完成，正在保存！'})
-                for progress in self.convert_avi_to_mp4(self.paths['video_output']):
+                # 转换并上传
+                for progress in self.convert_avi_to_mp4(local_paths['video_output_avi'], local_paths['video_output_mp4']):
                     self.socketio.emit('progress', {'data': progress})
-                uploadedUrl = self.upload(self.paths['output'])
-                self.data["outVideo"] = uploadedUrl
-                self.save_data(json.dumps(self.data), 'http://localhost:9999/videoRecords')
-                self.cleanup_files([self.paths['download'], self.paths['output'], self.paths['video_output']])
+                uploadedUrl = self.upload(local_paths['video_output_mp4'])
+                
+                record_data = params.copy()
+                record_data["outVideo"] = uploadedUrl
+                self.save_data(json.dumps(record_data), 'http://localhost:9999/videoRecords')
+                self.socketio.emit('video_result', {'url': uploadedUrl})
+                self.cleanup_files([local_paths['download'], local_paths['video_output_avi'], local_paths['video_output_mp4']])
 
         return Response(generate(), mimetype='multipart/x-mixed-replace; boundary=frame')
 
     def predictCamera(self):
         """摄像头视频流处理接口"""
-        self.data.clear()
-        self.data.update({
-            "username": request.args.get('username'), "weight": request.args.get('weight'),
+        request_id = str(uuid.uuid4())[:8]
+        local_paths = {
+            'camera_output_avi': f'./runs/video/camera_output_{request_id}.avi',
+            'camera_output_mp4': f'./runs/video/camera_output_{request_id}.mp4'
+        }
+        
+        params = {
+            "username": request.args.get('username'),
+            "weight": request.args.get('weight'),
             "kind": request.args.get('kind'),
-            "conf": request.args.get('conf'), "startTime": request.args.get('startTime')
-        })
+            "conf": request.args.get('conf'),
+            "startTime": request.args.get('startTime')
+        }
+        
         self.socketio.emit('message', {'data': '正在加载，请稍等！'})
-        model = YOLO(f'./weights/{self.data["weight"]}')
+        model = YOLO(f'./weights/{params["weight"]}')
         cap = cv2.VideoCapture(0)
         cap.set(cv2.CAP_PROP_FRAME_WIDTH, 640)
         cap.set(cv2.CAP_PROP_FRAME_HEIGHT, 480)
-        video_writer = cv2.VideoWriter(self.paths['camera_output'], cv2.VideoWriter_fourcc(*'XVID'), 20, (640, 480))
+        video_writer = cv2.VideoWriter(local_paths['camera_output_avi'], cv2.VideoWriter_fourcc(*'XVID'), 20, (640, 480))
         self.recording = True
 
         def generate():
             try:
+                current_conf = float(params['conf'])
                 while self.recording:
                     ret, frame = cap.read()
                     if not ret:
                         break
-                    results = model.predict(source=frame, imgsz=640, conf=float(self.data['conf']), show=False)
+                    results = model.predict(source=frame, imgsz=640, conf=current_conf, show=False, agnostic_nms=True)
                     processed_frame = results[0].plot()
                     if self.recording and video_writer:
                         video_writer.write(processed_frame)
@@ -167,13 +221,15 @@ class VideoProcessingApp:
             finally:
                 self.cleanup_resources(cap, video_writer)
                 self.socketio.emit('message', {'data': '处理完成，正在保存！'})
-                for progress in self.convert_avi_to_mp4(self.paths['camera_output']):
+                for progress in self.convert_avi_to_mp4(local_paths['camera_output_avi'], local_paths['camera_output_mp4']):
                     self.socketio.emit('progress', {'data': progress})
-                uploadedUrl = self.upload(self.paths['output'])
-                self.data["outVideo"] = uploadedUrl
-                print(self.data)
-                self.save_data(json.dumps(self.data), 'http://localhost:9999/cameraRecords')
-                self.cleanup_files([self.paths['download'], self.paths['output'], self.paths['camera_output']])
+                uploadedUrl = self.upload(local_paths['camera_output_mp4'])
+                
+                record_data = params.copy()
+                record_data["outVideo"] = uploadedUrl
+                self.save_data(json.dumps(record_data), 'http://localhost:9999/cameraRecords')
+                self.socketio.emit('video_result', {'url': uploadedUrl})
+                self.cleanup_files([local_paths['camera_output_avi'], local_paths['camera_output_mp4']])
 
         return Response(generate(), mimetype='multipart/x-mixed-replace; boundary=frame')
 
@@ -191,9 +247,9 @@ class VideoProcessingApp:
         except requests.RequestException as e:
             print(f"上传记录时发生错误: {str(e)}")
 
-    def convert_avi_to_mp4(self, temp_output):
+    def convert_avi_to_mp4(self, temp_output, final_output):
         """使用 FFmpeg 将 AVI 格式转换为 MP4 格式，并显示转换进度。"""
-        ffmpeg_command = f"ffmpeg -i {temp_output} -vcodec libx264 {self.paths['output']} -y"
+        ffmpeg_command = f"ffmpeg -i {temp_output} -vcodec libx264 {final_output} -y"
         process = subprocess.Popen(ffmpeg_command, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE,
                                    text=True)
         total_duration = self.get_video_duration(temp_output)
@@ -202,6 +258,8 @@ class VideoProcessingApp:
             if "time=" in line:
                 try:
                     time_str = line.split("time=")[1].split(" ")[0]
+                    if "N/A" in time_str:
+                        continue
                     h, m, s = map(float, time_str.split(":"))
                     processed_time = h * 3600 + m * 60 + s
                     if total_duration > 0:

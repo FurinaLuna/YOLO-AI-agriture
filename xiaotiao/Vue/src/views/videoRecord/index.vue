@@ -1,79 +1,102 @@
 <template>
-	<div class="system-role-container layout-padding">
-		<div class="system-role-padding layout-padding-auto layout-padding-view">
-			<div class="system-user-search mb15">
-				<el-input v-model="state.tableData.param.search1" size="default" placeholder="请输入农作物类型" style="max-width: 180px"> </el-input>
-				<!-- <el-input v-model="state.tableData.param.search3" size="default" placeholder="请输入最低阈值" style="max-width: 180px; margin-left: 15px"></el-input> -->
-				<el-button size="default" type="primary" class="ml10" @click="getTableData()">
-					<el-icon>
-						<ele-Search />
-					</el-icon>
-					查询
-				</el-button>
+	<div class="system-role-container">
+		<el-card shadow="never" class="glass-card mb-4">
+			<!-- 搜索栏 -->
+			<div class="search-header">
+				<div class="search-inputs">
+					<el-input v-model="state.tableData.param.search1" placeholder="搜索作物类型..." clearable class="custom-input">
+						<template #prefix><el-icon><Search /></el-icon></template>
+					</el-input>
+				</div>
+				<div class="search-actions">
+					<el-button type="primary" @click="getTableData()" :loading="state.tableData.loading" class="action-btn query-btn">
+						查询视频记录
+					</el-button>
+				</div>
 			</div>
-			<el-table :data="state.tableData.data" v-loading="state.tableData.loading" style="width: 100%">
-				<el-table-column prop="num" label="序号" width="100" align="center" />
-				<el-table-column prop="inputVideo" label="原视频" width="200" align="center">
-					<template #default="scope">
-						<video class="video" controls :key="scope.row.inputVideo + uniqueKey" style="max-height: 80px;">
-							<source :src="scope.row.inputVideo" type="video/mp4" />
-						</video>
-					</template>
-				</el-table-column>
-				<el-table-column prop="outVideo" label="处理结果" width="200" align="center">
-					<template #default="scope">
-						<video class="video" preload="auto" controls :key="scope.row.outVideo + uniqueKey" style="max-height: 80px;">
-							<source :src="scope.row.outVideo" type="video/mp4" />
-						</video>
-					</template>
-				</el-table-column>
-				<el-table-column prop="kind" label="农作物种类" align="center" width="110"/>
-				<el-table-column prop="weight" label="识别权重" align="center" width="110"/>
-				<el-table-column prop="conf" label="最小阈值" show-overflow-tooltip width="110" align="center"></el-table-column>
-				<el-table-column prop="username" label="识别用户" show-overflow-tooltip align="center" width="110"></el-table-column>
-				<el-table-column prop="startTime" label="识别时间" show-overflow-tooltip align="center"></el-table-column>
-				<el-table-column label="操作" width="130" align="center">
-					<template #default="scope">
-						<el-button size="small" text type="primary" @click="onRowDel(scope.row)">删除</el-button>
-						<el-button size="small" text type="primary" @click="show(scope.row)">查看详情</el-button>
-					</template>
-				</el-table-column>
-			</el-table>
-			<el-pagination @size-change="onHandleSizeChange" @current-change="onHandleCurrentChange" class="mt15"
-				:pager-count="5" :page-sizes="[10, 20, 30]" v-model:current-page="state.tableData.param.pageNum"
-				background v-model:page-size="state.tableData.param.pageSize"
-				layout="total, sizes, prev, pager, next, jumper" :total="state.tableData.total">
-			</el-pagination>
-		</div>
+
+			<!-- 数据表格 -->
+			<div class="table-wrapper">
+				<el-table :data="state.tableData.data" v-loading="state.tableData.loading" class="custom-table">
+					<el-table-column prop="num" label="#" width="60" align="center" />
+					
+					<el-table-column label="原始视频" width="180" align="center">
+						<template #default="scope">
+							<div class="video-preview-box">
+								<video class="table-video" :key="scope.row.inputVideo + uniqueKey">
+									<source :src="scope.row.inputVideo" type="video/mp4" />
+								</video>
+								<div class="video-overlay"><el-icon><VideoPlay /></el-icon></div>
+							</div>
+						</template>
+					</el-table-column>
+
+					<el-table-column label="AI 处理结果" width="180" align="center">
+						<template #default="scope">
+							<div class="video-preview-box result-box">
+								<video class="table-video" :key="scope.row.outVideo + uniqueKey">
+									<source :src="scope.row.outVideo" type="video/mp4" />
+								</video>
+								<div class="video-overlay"><el-icon><Monitor /></el-icon></div>
+							</div>
+						</template>
+					</el-table-column>
+
+					<el-table-column prop="kind" label="农作物种类">
+						<template #default="scope">
+							<el-tag size="small" effect="light" type="success">{{ scope.row.kind || '-' }}</el-tag>
+						</template>
+					</el-table-column>
+					
+					<el-table-column prop="weight" label="使用模型" show-overflow-tooltip />
+					<el-table-column prop="conf" label="置信阈值" width="100" align="center" />
+					<el-table-column prop="username" label="操作员" width="100" align="center" />
+					<el-table-column prop="startTime" label="识别时间" width="180" align="center" />
+
+					<el-table-column label="操作" width="180" fixed="right" align="right">
+						<template #default="scope">
+							<el-button link type="primary" @click="show(scope.row)">对比分析</el-button>
+							<el-button link type="danger" @click="onRowDel(scope.row)">彻底删除</el-button>
+						</template>
+					</el-table-column>
+				</el-table>
+
+				<div class="pagination-footer mt-4">
+					<el-pagination @size-change="onHandleSizeChange" @current-change="onHandleCurrentChange"
+						:pager-count="5" :page-sizes="[10, 20, 50]" v-model:current-page="state.tableData.param.pageNum"
+						background v-model:page-size="state.tableData.param.pageSize"
+						layout="total, sizes, prev, pager, next" :total="state.tableData.total" />
+				</div>
+			</div>
+		</el-card>
 	</div>
 </template>
 
-<script setup lang="ts" name="systemRole">
+<script setup lang="ts" name="videoRecord">
 import { reactive, onMounted, ref } from 'vue';
 import { ElMessageBox, ElMessage } from 'element-plus';
 import request from '/@/utils/request';
 import { useUserInfo } from '/@/stores/userInfo';
 import { storeToRefs } from 'pinia';
+import { Search, VideoPlay, Monitor } from '@element-plus/icons-vue';
 
 const stores = useUserInfo();
 const { userInfos } = storeToRefs(stores);
 
-const state = reactive<SysRoleState>({
+const state = reactive({
 	tableData: {
 		data: [] as any,
 		total: 0,
 		loading: false,
 		param: {
 			search: '',
-			search3: '',
-			search2: '',
+			search1: '',
 			pageNum: 1,
 			pageSize: 10,
 		},
 	},
 });
 
-// 唯一标识符，动态刷新
 const uniqueKey = ref(0);
 
 const getTableData = () => {
@@ -81,31 +104,20 @@ const getTableData = () => {
 	if (userInfos.value.userName != 'admin') {
 		state.tableData.param.search = userInfos.value.userName;
 	}
-	request
-		.get('/api/videoRecords', {
-			params: state.tableData.param,
-		})
-		.then((res) => {
-			if (res.code == 0) {
-				state.tableData.data = [];
-				setTimeout(() => {
-					state.tableData.loading = false;
-				}, 500);
-				for (let i = 0; i < res.data.records.length; i++) {
-					state.tableData.data[i] = res.data.records[i];
-					state.tableData.data[i]['num'] = i + 1;
-				}
-				state.tableData.total = res.data.total;
-
-				// 更新唯一标识符
-				uniqueKey.value++;
-			} else {
-				ElMessage({
-					type: 'error',
-					message: res.msg,
-				});
-			}
-		});
+	request.get('/api/videoRecords', { params: state.tableData.param }).then((res) => {
+		if (res.code == 0) {
+			state.tableData.data = res.data.records.map((item: any, index: number) => ({
+				...item,
+				num: (state.tableData.param.pageNum - 1) * state.tableData.param.pageSize + index + 1
+			}));
+			state.tableData.total = res.data.total;
+			uniqueKey.value++;
+			setTimeout(() => { state.tableData.loading = false; }, 300);
+		} else {
+			state.tableData.loading = false;
+			ElMessage.error(res.msg);
+		}
+	});
 };
 
 const show = (row: any) => {
@@ -113,80 +125,137 @@ const show = (row: any) => {
 };
 
 const onRowDel = (row: any) => {
-	ElMessageBox.confirm(`此操作将永久删除该信息，是否继续?`, '提示', {
+	ElMessageBox.confirm(`此操作将永久删除该视频记录，是否继续?`, '提示', {
 		confirmButtonText: '确认',
 		cancelButtonText: '取消',
 		type: 'warning',
-	})
-		.then(() => {
-			request.delete('/api/videoRecords/' + row.id).then((res) => {
-				if (res.code == 0) {
-					ElMessage({
-						type: 'success',
-						message: '删除成功！',
-					});
-				} else {
-					ElMessage({
-						type: 'error',
-						message: res.msg,
-					});
-				}
-			});
-			setTimeout(() => {
+	}).then(() => {
+		request.delete('/api/videoRecords/' + row.id).then((res) => {
+			if (res.code == 0) {
+				ElMessage.success('删除成功！');
 				getTableData();
-			}, 500);
-		})
-		.catch(() => { });
+			} else {
+				ElMessage.error(res.msg);
+			}
+		});
+	}).catch(() => { });
 };
 
 const onHandleSizeChange = (val: number) => {
 	state.tableData.param.pageSize = val;
 	getTableData();
 };
-
 const onHandleCurrentChange = (val: number) => {
 	state.tableData.param.pageNum = val;
 	getTableData();
 };
 
-onMounted(() => {
-	getTableData();
-});
+onMounted(() => getTableData());
 </script>
-
 
 <style scoped lang="scss">
 .system-role-container {
-	.system-role-padding {
-		padding: 15px;
-		.el-table {
-			flex: 1;
-			:deep(.el-table__row) {
-				height: 100px;  // 进一步减小行高
-			}
-			:deep(.el-table__header) {
-				th {
-					padding: 4px 0;  // 减小表头padding
-				}
-			}
-			:deep(.el-table__cell) {
-				padding: 2px 0;  // 减小单元格padding
-			}
-			:deep(.cell) {
-				line-height: 1.2;  // 减小文字行高
-			}
-		}
-		:deep(.el-input) {
-			height: 32px;
-			line-height: 32px;
+	padding: 20px;
+	height: 100%;
+	background: transparent;
+
+	.glass-card {
+		background: rgba(255, 255, 255, 0.7);
+		backdrop-filter: blur(12px);
+		border-radius: 16px;
+		border: 1px solid rgba(255, 255, 255, 0.5);
+		box-shadow: 0 4px 15px rgba(0, 0, 0, 0.03);
+		padding: 20px;
+	}
+}
+
+.search-header {
+	display: flex;
+	justify-content: space-between;
+	align-items: center;
+	margin-bottom: 24px;
+	gap: 20px;
+
+	.search-inputs {
+		.custom-input { width: 220px; }
+		:deep(.el-input__wrapper) {
+			border-radius: 8px;
+			background: rgba(255, 255, 255, 0.5);
+			box-shadow: 0 0 0 1px rgba(0,0,0,0.05) inset;
 		}
 	}
 }
 
-.video {
-	width: 100%;
-	max-height: 80px;  // 减小视频最大高度
-	height: auto;
-	object-fit: contain;
+.action-btn {
+	border-radius: 8px;
+	font-weight: 600;
+	transition: all 0.2s;
+	&:hover { transform: translateY(-2px); }
+}
+
+.query-btn {
+	background: linear-gradient(135deg, #3B82F6, #2563EB) !important;
+	border: none !important;
+}
+
+.table-wrapper {
+	background: rgba(255, 255, 255, 0.4);
+	border-radius: 12px;
+	padding: 10px;
+	border: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+.custom-table {
+	background: transparent !important;
+	--el-table-bg-color: transparent;
+	--el-table-tr-bg-color: transparent;
+
+	:deep(.el-table__header) th {
+		font-weight: 700;
+		color: #1e293b;
+		background: transparent !important;
+		padding: 12px 0;
+	}
+
+	:deep(.el-table__row) {
+		height: 100px;
+		&:hover td { background-color: rgba(16, 185, 129, 0.05) !important; }
+	}
+
+	.video-preview-box {
+		position: relative;
+		width: 140px;
+		height: 80px;
+		border-radius: 8px;
+		overflow: hidden;
+		background: #000;
+		box-shadow: 0 4px 10px rgba(0,0,0,0.15);
+		cursor: pointer;
+
+		.table-video { width: 100%; height: 100%; object-fit: cover; opacity: 0.8; }
+		
+		.video-overlay {
+			position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+			display: flex; align-items: center; justify-content: center;
+			background: rgba(0,0,0,0.2);
+			color: #fff; font-size: 24px;
+			transition: all 0.3s;
+			opacity: 0.6;
+		}
+
+		&:hover {
+			.video-overlay { opacity: 1; background: rgba(16, 185, 129, 0.3); }
+			.table-video { opacity: 1; transform: scale(1.05); }
+		}
+	}
+
+	.result-box {
+		border: 1px solid rgba(16, 185, 129, 0.4);
+	}
+}
+
+.pagination-footer {
+	display: flex;
+	justify-content: flex-end;
 }
 </style>

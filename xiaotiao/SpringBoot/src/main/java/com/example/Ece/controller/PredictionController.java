@@ -97,8 +97,8 @@ public class PredictionController {
                     String.class);
             System.out.println("Received response: " + response);
             JSONObject responses = JSONObject.parseObject(response);
-            if (responses.get("status").equals(400)) {
-                return Result.error("-1", "Error: " + responses.get("message"));
+            if (responses.getInteger("code") != null && responses.getInteger("code") != 0) {
+                return Result.error("-1", "Error: " + responses.getString("message"));
             } else {
                 ImgRecords imgRecords = new ImgRecords();
                 imgRecords.setWeight(request.getWeight());

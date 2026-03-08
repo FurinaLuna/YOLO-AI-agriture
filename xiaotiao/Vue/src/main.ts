@@ -8,6 +8,7 @@ import 'animate.css/animate.min.css';
 
 import ElementPlus from 'element-plus';
 import 'element-plus/dist/index.css';
+import '/@/theme/tailwind.css';
 import '/@/theme/index.scss';
 import VueGridLayout from 'vue-grid-layout';
 import * as ElementPlusIconsVue from '@element-plus/icons-vue';

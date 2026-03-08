@@ -3,42 +3,65 @@
 		<div class="system-predict-padding layout-padding-auto layout-padding-view">
 			<div class="header">
 				<div class="weight">
-					<el-select v-model="kind" placeholder="请选择作物种类" size="large" style="width: 200px" @change="getData">
+					<el-select v-model="kind" placeholder="请选择作物种类" size="large" style="width: 160px" @change="getData">
 						<el-option v-for="item in state.kind_items" :key="item.value" :label="item.label"
 							:value="item.value" />
 					</el-select>
 				</div>
 				<div class="weight">
-					<el-select v-model="weight" placeholder="请选择模型" size="large" style="margin-left: 20px;width: 200px">
+					<el-select v-model="weight" placeholder="请选择模型" size="large" style="margin-left: 10px;width: 160px" @change="onWeightChange">
 						<el-option v-for="item in state.weight_items" :key="item.value" :label="item.label"
 							:value="item.value" />
 					</el-select>
 				</div>
-				<div class="conf" style="margin-left: 20px;display: flex; flex-direction: row;">
-					<div
-						style="font-size: 14px;margin-right: 20px;display: flex;justify-content: start;align-items: center;color: #909399;">
-						设置最小置信度阈值</div>
-					<el-slider v-model="conf" :format-tooltip="formatTooltip" style="width: 300px;" />
+				<div class="conf" style="margin-left: 10px;display: flex; flex-direction: row; align-items: center;">
+					<span style="font-size: 13px; color: #64748b; margin-right: 12px; white-space: nowrap;">置信度阈值</span>
+					<el-slider v-model="conf" :format-tooltip="formatTooltip" style="width: 150px;" />
 				</div>
-				<div class="button-section" style="margin-left: 20px">
-					<el-button type="primary" @click="upData" class="predict-button">开始预测</el-button>
+				<div class="button-section" style="margin-left: auto">
+					<el-button 
+						type="primary" 
+						@click="upData" 
+						class="predict-button" 
+						:loading="aiStore.imgPredict.loading"
+						:disabled="aiStore.imgPredict.loading"
+					>🔍 {{ aiStore.imgPredict.loading ? '分析中...' : '开始识别' }}</el-button>
 				</div>
 			</div>
-			<!-- 图片显示区域修改 -->
-			<el-row :gutter="10" class="image-display">
+
+			<!-- 新增：核心指标摘要栏 (移至顶部) -->
+			<div class="metrics-summary" v-if="aiStore.imgPredict.predictionResult.label">
+				<div class="metric-item">
+					<i class="iconfontjs icon-znwd"></i>
+					<span class="m-label">识别概率：</span>
+					<span class="m-value">{{ formatConfidenceArray(aiStore.imgPredict.predictionResult.confidence as any)[0] }}</span>
+				</div>
+				<div class="metric-divider"></div>
+				<div class="metric-item">
+					<i class="iconfontjs icon-huanjingjiance"></i>
+					<span class="m-label">分析耗时：</span>
+					<span class="m-value">{{ formatTime(aiStore.imgPredict.predictionResult.allTime) }}</span>
+				</div>
+				<div class="metric-item secondary" v-if="formatLabelArray(aiStore.imgPredict.predictionResult.label).length > 1">
+					<el-tag type="info" size="small" effect="plain">+ 更多结果在下方</el-tag>
+				</div>
+			</div>
+
+			<!-- 图片显示区域 -->
+			<el-row :gutter="15" class="image-display">
 				<!-- 原图展示 -->
 				<el-col :span="8">
 					<el-card shadow="hover" class="card">
 						<div class="image-title">原图片</div>
 						<el-upload v-model="state.img" ref="uploadFile" class="avatar-uploader"
 							action="http://localhost:9999/files/upload" :show-file-list="false"
-							:on-success="handleAvatarSuccessone">
-							<el-image v-if="imageUrl" :src="imageUrl" class="preview-image" fit="contain" />
+							:on-success="handleAvatarSuccessone"
+							:disabled="aiStore.imgPredict.loading"
+						>
+							<el-image v-if="aiStore.imgPredict.imageUrl" :src="aiStore.imgPredict.imageUrl" class="preview-image" fit="contain" />
 							<div v-else class="uploader-content"> 
-								<el-icon class="upload-icon">
-									<Plus />
-								</el-icon>
-								<div class="upload-text">点击上传图片</div>
+								<el-icon class="upload-icon"><Plus /></el-icon>
+								<div class="upload-text">点击或拖拽上传</div>
 							</div>
 						</el-upload>
 					</el-card>
@@ -47,61 +70,37 @@
 				<!-- 预测结果图 -->
 				<el-col :span="8">
 					<el-card shadow="hover" class="card">
-						<div class="image-title">预测结果</div>
-						<el-image v-if="predictedImageUrl" :src="predictedImageUrl" class="preview-image"
+						<div class="image-title">预测结果图</div>
+						<el-image v-if="aiStore.imgPredict.predictedImageUrl" :src="aiStore.imgPredict.predictedImageUrl" class="preview-image"
 							fit="contain" />
 						<div v-else class="placeholder">
-							<el-icon>
-								<Picture />
-							</el-icon>
-							<span>预测后将在此显示结果</span>
+							<el-icon><Picture /></el-icon>
+							<span>等待识别...</span>
 						</div>
 					</el-card>
 				</el-col>
-				<!-- 智能建议 -->
+
+				<!-- 智谱 GLM 建议 -->
 				<el-col :span="8">
-					<el-card shadow="hover" class="card">
-						<div class="image-title">智能建议</div>
-						<div class="suggestion-content" v-if="state.aiSuggestion">
-							<div class="suggestion-text">{{ state.aiSuggestion }}</div>
+					<el-card shadow="hover" class="card ai-suggestion-card">
+						<div class="image-title ai-card-header">
+							<div class="ai-badge">
+								<span class="ai-dot"></span>
+								<span>专家诊断建议</span>
+							</div>
+						</div>
+						<div class="suggestion-content" v-if="aiStore.imgPredict.aiSuggestion">
+							<div class="suggestion-markdown markdown-body" v-html="renderMarkdown(aiStore.imgPredict.aiSuggestion)"></div>
+						</div>
+						<div class="suggestion-content" v-else-if="aiStore.imgPredict.suggestionLoading">
+							<div class="ai-loading">
+								<div class="ai-loading-dots"><span></span><span></span><span></span></div>
+								<p>智谱 GLM 正在思考...</p>
+							</div>
 						</div>
 						<div v-else class="placeholder">
-							<el-icon>
-								<ChatLineRound />
-							</el-icon>
-							<span>预测完成后将自动生成智能建议</span>
-						</div>
-					</el-card>
-				</el-col>
-			</el-row>
-			<el-row class="result-section">
-				<el-col :span="24">
-					<el-card>
-						<div class="bottom" v-if="state.predictionResult.label">
-							<div class="result-column">
-								<div class="result-title">识别结果：</div>
-								<div v-for="(label, index) in formatLabelArray(state.predictionResult.label)" :key="index" class="result-item">
-									<span class="result-value">{{ label }}</span>
-								</div>
-							</div>
-							<div class="result-column">
-								<div class="result-title">预测概率：</div>
-								<div v-for="(conf, index) in formatConfidenceArray(state.predictionResult.confidence)" :key="index" class="result-item">
-									<span class="result-value">{{ conf }}</span>
-								</div>
-							</div>
-							<div class="result-column">
-								<div class="result-title">总时间：</div>
-								<div class="result-item">
-									<span class="result-value">{{ formatTime(state.predictionResult.allTime) }}</span>
-								</div>
-							</div>
-						</div>
-						<div class="bottom placeholder" v-else>
-							<div style="width: 100%; text-align: center; color: #909399;">
-								<el-icon style="margin-right: 8px; vertical-align: middle;"><Picture /></el-icon>
-								<span>预测结果将在这里显示</span>
-							</div>
+							<el-icon><ChatLineRound /></el-icon>
+							<span>智能建议生成区</span>
 						</div>
 					</el-card>
 				</el-col>
@@ -111,19 +110,26 @@
 </template>
 
 
-<script setup lang="ts" name="personal">
+<script setup lang="ts" name="imgPredict">
 import { reactive, ref, onMounted } from 'vue';
 import type { UploadInstance, UploadProps } from 'element-plus';
 import { ElMessage } from 'element-plus';
 import request from '/@/utils/request';
+import MarkdownIt from 'markdown-it';
+
+// 初始化 Markdown 渲染器，用于 AI 建议内容
+const md = new MarkdownIt({ breaks: true, linkify: true, typographer: true });
+const renderMarkdown = (text: string) => md.render(text || '');
 import { Plus, ChatLineRound, Picture } from '@element-plus/icons-vue';
 import { useUserInfo } from '/@/stores/userInfo';
 import { storeToRefs } from 'pinia';
 import { formatDate } from '/@/utils/formatTime';
 import axios from 'axios';
+import { useAIStore } from '/@/stores/aiStore';
 
+const aiStore = useAIStore();
 const imageUrl = ref('');
-const conf = ref('');
+const conf = ref(50);
 const weight = ref('');
 const kind = ref('');
 const uploadFile = ref<UploadInstance>();
@@ -172,11 +178,6 @@ const state = reactive({
     },
 	],
 	img: '',
-	predictionResult: {
-		label: '',
-		confidence: '',
-		allTime: '',
-	},
 	form: {
 		username: '',
 		inputImg: null as any,
@@ -185,8 +186,6 @@ const state = reactive({
 		kind: '',
 		startTime: ''
 	},
-	aiSuggestion: '',
-	suggestionLoading: false,
 });
 
 const formatTooltip = (val: number) => {
@@ -194,80 +193,122 @@ const formatTooltip = (val: number) => {
 }
 
 const handleAvatarSuccessone: UploadProps['onSuccess'] = (response, uploadFile) => {
-	imageUrl.value = URL.createObjectURL(uploadFile.raw!);
+	const url = URL.createObjectURL(uploadFile.raw!);
+	aiStore.imgPredict.imageUrl = url;
 	state.img = response.data;
 };
 
+// 模型选择变化时的回调
+const onWeightChange = (val: string) => {
+	if (!val) return;
+	// 根据模型文件名自动匹配种类
+	const matchedKind = state.kind_items.find(item => val.toLowerCase().includes(item.value.toLowerCase()));
+	if (matchedKind) {
+		kind.value = matchedKind.value;
+	}
+};
+
 const getData = () => {
+	// 如果已经选了模型且种类匹配，就不清空了，增强体验
+	if (!weight.value || !weight.value.includes(kind.value)) {
+		weight.value = ''; 
+	}
 	request.get('/api/flask/file_names').then((res) => {
 		if (res.code == 0) {
 			res.data = JSON.parse(res.data);
-			state.weight_items = res.data.weight_items.filter(item => item.value.includes(kind.value));
+			// 如果没有选种类，显示所有模型；如果选了种类，执行过滤
+			if (kind.value) {
+				state.weight_items = res.data.weight_items.filter(item => item.value.includes(kind.value));
+			} else {
+				state.weight_items = res.data.weight_items;
+			}
 		} else {
-			ElMessage.error(res.msg);
+			ElMessage.error(res.msg || '获取模型列表失败');
 		}
 	});
 };
 
+onMounted(() => {
+	getData(); // 页面加载时获取一次所有模型
+});
+
 
 const upData = () => {
+	if (!kind.value) {
+		ElMessage.warning('请选择作物种类');
+		return;
+	}
+	if (!weight.value) {
+		ElMessage.warning('请选择模型');
+		return;
+	}
+	if (conf.value === null || isNaN(Number(conf.value)) || Number(conf.value) === 0) {
+		ElMessage.warning('请设置有效的置信度阈值（需大于0）');
+		return;
+	}
+	if (!state.img) {
+		ElMessage.warning('请上传图片');
+		return;
+	}
 	state.form.weight = weight.value;
-	state.form.conf = (parseFloat(conf.value) / 100);
+	state.form.conf = (conf.value / 100);
+
 	state.form.username = userInfos.value.userName;
 	state.form.inputImg = state.img;
 	state.form.kind = kind.value;
 	state.form.startTime = formatDate(new Date(), 'YYYY-mm-dd HH:MM:SS');
-	console.log(state.form);
+	
+	aiStore.imgPredict.loading = true;
+	aiStore.imgPredict.aiSuggestion = ''; // 重置建议
+	
 	request.post('/api/flask/predict', state.form).then((res) => {
-		if (res.code == 0) {
-			const originalImage = imageUrl.value;
-			try {
-				res.data = JSON.parse(res.data);
-
-				// 如果 res.data.label 是字符串，则解析为数组
-				if (typeof res.data.label === 'string') {
-					res.data.label = JSON.parse(res.data.label);
-				}
-
-				// 确保 res.data.label 是数组后再调用 map
-				if (Array.isArray(res.data.label)) {
-					state.predictionResult.label = res.data.label.map(item => item.replace(/\\u([\dA-Fa-f]{4})/g, (_, code) =>
-						String.fromCharCode(parseInt(code, 16))
-					));
-				} else {
-					console.error("res.data.label 不是数组:", res.data.label);
-				}
-				state.predictionResult.confidence = res.data.confidence;
-				state.predictionResult.allTime = res.data.allTime;
-
-				// 覆盖原图片
-				if (res.data.outImg) {
-					// 使用服务器返回的新图片路径
-					predictedImageUrl.value = res.data.outImg;
-				} else {
-					// 否则保留原图片路径
-					imageUrl.value = imageUrl.value;
-				}
-				console.log(state.predictionResult);
-			} catch (error) {
-				console.error('解析 JSON 时出错:', error);
-			}
-			ElMessage.success('预测成功！');
-			// 自动获取AI建议
-			getAISuggestion();
-		} else {
-			ElMessage.error(res.msg);
+		aiStore.imgPredict.loading = false;
+		ElMessage.closeAll();
+		if (res.code != 0) {
+			aiStore.imgPredict.predictionResult.label = '';
+			aiStore.imgPredict.predictionResult.confidence = '';
+			aiStore.imgPredict.predictionResult.allTime = '';
+			aiStore.imgPredict.predictedImageUrl = '';
+			aiStore.imgPredict.aiSuggestion = '';
+			ElMessage.warning(res.msg || '未发现识别结果，请尝试调低置信度');
+			return;
 		}
+
+		try {
+			res.data = JSON.parse(res.data);
+			if (typeof res.data.label === 'string') res.data.label = JSON.parse(res.data.label);
+			
+			if (Array.isArray(res.data.label) && res.data.label.length > 0) {
+				aiStore.imgPredict.predictionResult.label = res.data.label.map(item => item.replace(/\\u([\dA-Fa-f]{4})/g, (_, code) =>
+					String.fromCharCode(parseInt(code, 16))
+				));
+				aiStore.imgPredict.predictionResult.confidence = res.data.confidence;
+				aiStore.imgPredict.predictionResult.allTime = res.data.allTime;
+				if (res.data.outImg) aiStore.imgPredict.predictedImageUrl = res.data.outImg;
+				
+				ElMessage.success('预测成功！');
+				getAISuggestion();
+			} else {
+				// 兜底逻辑：如果返回 code 0 但结果依然为空
+				aiStore.imgPredict.predictionResult.label = '';
+				ElMessage.warning('检测结果低于当前阈值，请尝试调低滑动条');
+			}
+		} catch (error) {
+			console.error('解析错误:', error);
+			ElMessage.error('结果解析失败');
+		} finally {
+			aiStore.imgPredict.loading = false;
+		}
+	}).catch(() => {
+		aiStore.imgPredict.loading = false;
 	});
 };
 // 获取AI建议
 const getAISuggestion = async () => {
-	if (!state.predictionResult.label) {
-		ElMessage.warning('请先进行预测');
-		return;
-	}
+	// 如果没有识别结果，直接安静地退出，不要弹窗报“请先预测”这种气人的话
+	if (!aiStore.imgPredict.predictionResult.label || aiStore.imgPredict.predictionResult.label.length === 0) return;
 	
-	state.suggestionLoading = true;
+	aiStore.imgPredict.suggestionLoading = true;
 	try {
 		const apiKey = '334ca8db8ede46d9bc1f73d58aa968fc.r9gdj8k3GW8u9CR4';
 		
@@ -275,8 +316,8 @@ const getAISuggestion = async () => {
 
 1. 基本信息：
 - 作物类型：${state.kind_items.find(item => item.value === kind.value)?.label || kind.value}
-- 检测到的病害：${state.predictionResult.label}
-- 检测置信度：${state.predictionResult.confidence}
+- 检测到的病害：${aiStore.imgPredict.predictionResult.label}
+- 检测置信度：${aiStore.imgPredict.predictionResult.confidence}
 
 2. 请提供以下方面的专业分析：
 (1) 病害危害程度：
@@ -310,13 +351,13 @@ const getAISuggestion = async () => {
 			}
 		});
 
-		state.aiSuggestion = response.data.choices[0].message.content;
+		aiStore.imgPredict.aiSuggestion = response.data.choices[0].message.content;
 		ElMessage.success('分析完成');
 	} catch (error) {
 		console.error('获取AI建议出错:', error);
 		ElMessage.error('获取建议失败，请检查网络连接或API密钥是否正确');
 	} finally {
-		state.suggestionLoading = false;
+		aiStore.imgPredict.suggestionLoading = false;
 	}
 };
 
@@ -363,75 +404,122 @@ onMounted(() => {
 </script>
 
 <style scoped lang="scss">
+/* ========================
+   容器与基础布局
+======================== */
 .system-predict-container {
 	width: 100%;
-	height: 100vh;
+	height: 100%;
 	display: flex;
 	flex-direction: column;
 	overflow-y: auto;
-	background: #f5f7fa;
+	background: transparent; /* 让全局 Mesh Gradient 透出来 */
 
 	.system-predict-padding {
 		padding: 15px;
 		padding-bottom: 0;
-		padding-top: 0;  /* 移除顶部内边距 */
-		min-height: calc(100vh - 60px);
+		padding-top: 0;
+		min-height: calc(100% - 60px);
 	}
 }
 
+/* 工具栏头部 */
 .header {
 	width: 100%;
-	padding: 10px 0;
 	display: flex;
 	align-items: center;
 	flex-wrap: wrap;
 	gap: 15px;
 	margin-bottom: 1px;
-	background: white;
-	padding: 10px;
-	border-radius: 8px;
-	box-shadow: none;  /* 移除阴影 */
+	background: rgba(255, 255, 255, 0.85);
+	backdrop-filter: blur(12px);
+	padding: 12px 16px;
+	border-radius: 12px;
+	box-shadow: 0 1px 4px rgba(0, 0, 0, 0.05);
+	border: 1px solid rgba(255, 255, 255, 0.6);
 }
 
+/* 核心指标摘要栏 */
+.metrics-summary {
+	margin-top: 15px;
+	background: rgba(16, 185, 129, 0.05);
+	border: 1px solid rgba(16, 185, 129, 0.15);
+	border-radius: 12px;
+	padding: 12px 24px;
+	display: flex;
+	align-items: center;
+	gap: 30px;
+	backdrop-filter: blur(8px);
+	animation: slideDown 0.4s ease-out;
+
+	.metric-item {
+		display: flex;
+		align-items: center;
+		gap: 8px;
+		
+		i { font-size: 18px; color: #10B981; }
+		.m-label { font-size: 13px; color: #64748b; font-weight: 500; }
+		.m-value { font-size: 16px; color: #10B981; font-weight: 700; font-family: 'PingFang SC'; }
+		
+		&.secondary { margin-left: auto; }
+	}
+
+	.metric-divider {
+		width: 1px;
+		height: 20px;
+		background: rgba(16, 185, 129, 0.2);
+	}
+}
+
+@keyframes slideDown {
+	from { opacity: 0; transform: translateY(-10px); }
+	to { opacity: 1; transform: translateY(0); }
+}
+
+/* 图片展示区 */
 .image-display {
 	margin-top: 15px;
 
 	.card {
 		height: 100%;
-		background: white;
-		border-radius: 8px;
-		box-shadow: none;
-		transition: all 0.3s ease;
-		
+		background: rgba(255, 255, 255, 0.85);
+		backdrop-filter: blur(12px);
+		border-radius: 12px;
+		box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+		border: 1px solid rgba(255, 255, 255, 0.5);
+		transition: all 0.25s ease;
+
 		&:hover {
-			transform: none;
-			box-shadow: none;
+			box-shadow: 0 4px 16px rgba(0, 0, 0, 0.1);
+			transform: translateY(-1px);
 		}
 
 		.image-title {
-			font-size: 16px;
+			font-size: 14px;
 			font-weight: 600;
-			color: #303133;
+			color: #1e293b;
 			margin-bottom: 15px;
 			padding-bottom: 10px;
-			border-bottom: 1px solid #ebeef5;
+			border-bottom: 1px solid rgba(0, 0, 0, 0.06);
 		}
 
+		/* 上传区域 */
 		.avatar-uploader {
 			width: 100%;
 			height: 358px;
-			border: 1px dashed #d9d9d9;
-			border-radius: 4px;
+			border: 2px dashed rgba(16, 185, 129, 0.3);
+			border-radius: 10px;
 			cursor: pointer;
 			position: relative;
 			overflow: hidden;
-			transition: var(--el-transition-duration-fast);
+			transition: all 0.2s ease;
 			display: flex;
 			justify-content: center;
 			align-items: center;
 
 			&:hover {
-				border-color: var(--el-color-primary);
+				border-color: #10B981;
+				background: rgba(16, 185, 129, 0.03);
 			}
 		}
 
@@ -441,6 +529,7 @@ onMounted(() => {
 			object-fit: contain;
 		}
 
+		/* 上传引导内容 */
 		.uploader-content {
 			width: 100%;
 			height: 100%;
@@ -451,133 +540,257 @@ onMounted(() => {
 			gap: 10px;
 		}
 
-		.upload-icon {
-			font-size: 28px;
-			color: #909399;
-		}
+		.upload-icon { font-size: 32px; color: #10B981; }
+		.upload-text { color: #94a3b8; font-size: 14px; }
 
-		.upload-text {
-			color: #909399;
-			font-size: 14px;
-		}
-
+		/* 空状态占位符 */
 		.placeholder {
 			height: 358px;
 			display: flex;
 			flex-direction: column;
 			align-items: center;
 			justify-content: center;
-			gap: 10px;
-			color: #909399;
+			gap: 12px;
+			color: #94a3b8;
+			font-size: 13px;
 
-			.el-icon {
-				font-size: 28px;
-			}
+			.el-icon { font-size: 32px; }
 		}
 
+		/* AI 建议内容区 */
 		.suggestion-content {
 			height: 358px;
-			padding: 15px;
 			overflow-y: auto;
-			background: #f5f7fa;
-			border-radius: 4px;
 
-			.suggestion-text {
-				font-size: 14px;
-				line-height: 1.8;
-				color: #303133;
-				white-space: pre-wrap;
-				text-align: justify;
-			}
-
-			&::-webkit-scrollbar {
-				width: 6px;
-			}
-
-			&::-webkit-scrollbar-thumb {
-				background-color: #dcdfe6;
-				border-radius: 3px;
-			}
-
-			&::-webkit-scrollbar-track {
-				background-color: #f8f9fa;
-			}
+			&::-webkit-scrollbar { width: 5px; }
+			&::-webkit-scrollbar-thumb { background: rgba(0,0,0,0.12); border-radius: 8px; }
 		}
 	}
 }
+
+/* ========================
+   GLM AI 建议卡片专用样式
+======================== */
+.ai-suggestion-card {
+	/* 卡片头部：GLM 品牌 + 状态标签 */
+	.ai-card-header {
+		display: flex !important;
+		align-items: center;
+		justify-content: space-between;
+		flex-direction: row !important;
+	}
+
+	/* GLM 品牌徽章 */
+	.ai-badge {
+		display: flex;
+		align-items: center;
+		gap: 6px;
+		font-size: 14px;
+		font-weight: 700;
+		color: #1e293b;
+		background: linear-gradient(90deg, rgba(16,185,129,0.1), rgba(59,130,246,0.05));
+		padding: 3px 10px;
+		border-radius: 100px;
+		border: 1px solid rgba(16,185,129,0.2);
+	}
+
+	.ai-dot {
+		width: 7px;
+		height: 7px;
+		background: #10B981;
+		border-radius: 50%;
+		animation: pulse-dot 2s infinite;
+	}
+
+	@keyframes pulse-dot {
+		0%, 100% { opacity: 1; transform: scale(1); }
+		50% { opacity: 0.6; transform: scale(0.75); }
+	}
+
+	/* AI 分析中加载态 */
+	.ai-loading {
+		height: 100%;
+		display: flex;
+		flex-direction: column;
+		align-items: center;
+		justify-content: center;
+		gap: 16px;
+	}
+
+	.ai-loading-dots {
+		display: flex;
+		gap: 6px;
+
+		span {
+			width: 8px;
+			height: 8px;
+			background: #3B82F6;
+			border-radius: 50%;
+			animation: typingBounce 1.4s infinite ease-in-out both;
+
+			&:nth-child(1) { animation-delay: -0.32s; }
+			&:nth-child(2) { animation-delay: -0.16s; }
+		}
+	}
+
+	@keyframes typingBounce {
+		0%, 80%, 100% { transform: scale(0.5); opacity: 0.4; }
+		40% { transform: scale(1); opacity: 1; }
+	}
+
+	.ai-loading-text {
+		font-size: 13px;
+		color: #64748b;
+		margin: 0;
+	}
+
+	/* Markdown 渲染内容区 */
+	.suggestion-markdown {
+		font-size: 13px;
+		line-height: 1.75;
+		padding: 8px 4px;
+		color: #334155;
+
+		:deep(p) { margin-bottom: 8px; }
+		:deep(p:last-child) { margin-bottom: 0; }
+
+		:deep(h1), :deep(h2), :deep(h3) {
+			font-weight: 700;
+			color: #1e293b;
+			margin: 12px 0 6px;
+		}
+		:deep(h1) { font-size: 1em; border-bottom: 2px solid rgba(16,185,129,0.3); padding-bottom: 3px; }
+		:deep(h2) { font-size: 0.95em; }
+		:deep(h3) { font-size: 0.9em; color: #10B981; }
+
+		:deep(ul), :deep(ol) { padding-left: 18px; margin-bottom: 8px; }
+		:deep(li) { margin-bottom: 4px; }
+		:deep(ul > li::marker) { color: #10B981; }
+
+		:deep(strong) {
+			font-weight: 700;
+			color: #0f172a;
+		}
+
+		:deep(code) {
+			background: rgba(16,185,129,0.1);
+			color: #059669;
+			padding: 1px 5px;
+			border-radius: 4px;
+			font-size: 0.85em;
+			font-family: ui-monospace, Menlo, Consolas, monospace;
+		}
+
+		:deep(blockquote) {
+			border-left: 3px solid #10B981;
+			background: rgba(16,185,129,0.05);
+			padding: 8px 12px;
+			margin: 8px 0;
+			border-radius: 0 6px 6px 0;
+			color: #475569;
+		}
+
+		:deep(table) {
+			width: 100%;
+			border-collapse: collapse;
+			margin: 8px 0;
+			font-size: 0.85em;
+		}
+		:deep(th) {
+			background: linear-gradient(135deg, #10B981, #059669);
+			color: white;
+			padding: 7px 10px;
+			text-align: left;
+			font-weight: 600;
+		}
+		:deep(td) {
+			padding: 6px 10px;
+			border-bottom: 1px solid rgba(0,0,0,0.04);
+			color: #475569;
+		}
+		:deep(tr:nth-child(even) td) { background: rgba(248,250,252,0.8); }
+	}
+}
+
+/* ========================
+   底部结果栏
+======================== */
 .result-section {
 	margin-top: 10px;
 	padding: 0;
 
 	:deep(.el-card) {
-		background: white;
-		border-radius: 8px;
-		box-shadow: none;
+		background: rgba(255, 255, 255, 0.85);
+		backdrop-filter: blur(12px);
+		border-radius: 12px;
+		box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
 		margin: 0;
-		
-		.el-card__body {
-			padding: 0;
-		}
+
+		.el-card__body { padding: 0; }
 	}
 
 	.bottom {
 		display: flex;
 		justify-content: space-between;
 		align-items: flex-start;
-		padding: 15px 20px;
-		background: white;
-		border-radius: 8px;
+		padding: 16px 24px;
+		border-radius: 12px;
 		min-height: 115px;
+		max-height: 200px;
+		overflow-y: auto;
 
 		.result-column {
-			width: 33%;
-			padding: 0 15px;
-			border-right: 1px solid #ebeef5;
+			flex: 1;
+			padding: 0 16px;
+			border-right: 1px solid rgba(0,0,0,0.06);
 
-			&:last-child {
-				border-right: none;
-			}
+			&:last-child { border-right: none; }
 
 			.result-title {
-				font-size: 14px;
-				color: #606266;
-				font-weight: normal;
+				font-size: 12px;
+				color: #94a3b8;
+				font-weight: 600;
+				text-transform: uppercase;
+				letter-spacing: 0.04em;
 				margin-bottom: 10px;
 			}
 
 			.result-item {
-				margin: 5px 0;
-				
+				margin: 6px 0;
+
 				.result-value {
-					color: #409EFF;
-					font-weight: 500;
+					color: #10B981;
+					font-weight: 600;
+					font-size: 14px;
 				}
 			}
 		}
 
 		&.placeholder {
-			color: #909399;
+			color: #94a3b8;
 			justify-content: center;
 			align-items: center;
-			
-			.el-icon {
-				margin-right: 8px;
-				font-size: 16px;
-			}
+
+			.el-icon { margin-right: 8px; font-size: 16px; }
 		}
 	}
 }
 
+/* ========================
+   预测按钮（翠绿品牌色）
+======================== */
 .predict-button {
-	background: linear-gradient(45deg, #409eff, #36a2f1);
-	border: none;
-	box-shadow: 0 2px 6px rgba(64, 158, 255, 0.3);
-	transition: all 0.3s ease;
-
+	background: linear-gradient(135deg, #10B981, #059669) !important;
+	border: none !important;
+	border-radius: 8px !important;
+	box-shadow: 0 4px 12px rgba(16, 185, 129, 0.35) !important;
+	font-weight: 600;
+	transition: all 0.2s ease !important;
 
 	&:hover {
 		transform: translateY(-2px);
-		box-shadow: 0 4px 12px rgba(64, 158, 255, 0.4);
+		box-shadow: 0 6px 18px rgba(16, 185, 129, 0.45) !important;
 	}
 }
+
 </style>

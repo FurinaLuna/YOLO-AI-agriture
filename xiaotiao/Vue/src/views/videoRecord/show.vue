@@ -1,65 +1,76 @@
 <template>
-	<div class="system-predict-container layout-padding">
-		<div class="system-predict-padding layout-padding-auto layout-padding-view">
-			<div class="header">
-				<div class="kind">
-					<text>作物种类：</text>
-					<el-input v-model="state.form.weight" style="width: 150px" size="large" disabled />
+	<div class="system-predict-container">
+		<div class="system-predict-padding">
+			<!-- 高级信息头 -->
+			<el-card shadow="never" class="glass-card mb-4 header-card">
+				<div class="header-content">
+					<div class="meta-section">
+						<div class="meta-item">
+							<span class="label">分析对象:</span>
+							<el-tag effect="dark" type="success" class="brand-tag">{{ state.form.weight || '作物模型' }}</el-tag>
+						</div>
+						<div class="meta-item">
+							<span class="label">执行用户:</span>
+							<el-tag effect="plain" type="info">{{ state.form.username }}</el-tag>
+						</div>
+						<div class="meta-item">
+							<span class="label">置信阈值:</span>
+							<span class="value">{{ state.form.conf }}</span>
+						</div>
+						<div class="meta-item time">
+							<span class="label">时间戳:</span>
+							<span class="value">{{ state.form.startTime }}</span>
+						</div>
+					</div>
+					<div class="action-section">
+						<el-button-group>
+							<el-button type="primary" @click="playVideos" :icon="VideoPlay">同步播放</el-button>
+							<el-button type="success" plain @click="pauseVideos" :icon="VideoPause">暂停</el-button>
+						</el-button-group>
+					</div>
 				</div>
-				<div class="model">
-					<text>使用权重：</text>
-					<el-input v-model="state.form.weight" style="width: 180px" size="large" disabled />
-				</div>
-				<div class="count">
-					<text>最小阈值：</text>
-					<el-input v-model="state.form.conf" style="width: 100px" size="large" disabled />
-				</div>
-				<div class="username">
-					<text>用户：</text>
-					<el-input v-model="state.form.username" style="width: 150px" size="large" disabled />
-				</div>
-				<div class="startTime">
-					<text>开始时间：</text>
-					<el-input v-model="state.form.startTime" style="width: 200px" size="large" disabled />
-				</div>
-				<div class="button-section">
-					<el-button type="primary" @click="playVideos" class="predict-button">开始播放</el-button>
-				</div>
-				<div class="button-section">
-					<el-button type="success" @click="pauseVideos" class="predict-button">暂停播放</el-button>
-				</div>
-			</div>
-			<div class="cards" ref="cardsContainer">
-				<!-- 左侧区域的视频 -->
-				<div class="left" :style="{ width: leftWidth + '%' }">
-					<video class="video" v-if="state.form.inputVideo" preload="auto" controls>
-						<source :src="state.form.inputVideo" type="video/mp4" />
-					</video>
-				</div>
+			</el-card>
 
-				<!-- 分割条 -->
-				<div class="splitter" @mousedown="startDrag"></div>
+			<!-- 沉浸式对比区域 -->
+			<div class="analysis-lab glass-card">
+				<div class="lab-workspace" ref="cardsContainer">
+					<!-- 原视频 -->
+					<div class="video-panel left-panel" :style="{ width: leftWidth + '%' }">
+						<div class="panel-label">ORIGINAL FEED</div>
+						<video class="analysis-video" v-if="state.form.inputVideo" preload="auto" controls>
+							<source :src="state.form.inputVideo" type="video/mp4" />
+						</video>
+					</div>
 
-				<!-- 右侧区域的视频 -->
-				<div class="right" :style="{ width: 100 - leftWidth + '%' }">
-					<video class="video" preload="auto" v-if="state.form.outVideo" controls>
-						<source :src="state.form.outVideo" type="video/mp4" />
-					</video>
+					<!-- 智能分割条 -->
+					<div class="lab-splitter" @mousedown="startDrag">
+						<div class="splitter-handle">
+							<span></span><span></span><span></span>
+						</div>
+					</div>
+
+					<!-- AI 处理视频 -->
+					<div class="video-panel right-panel" :style="{ width: 100 - leftWidth + '%' }">
+						<div class="panel-label ai-label">AI ANALYSIS</div>
+						<video class="analysis-video" preload="auto" v-if="state.form.outVideo" controls>
+							<source :src="state.form.outVideo" type="video/mp4" />
+						</video>
+					</div>
 				</div>
 			</div>
 		</div>
 	</div>
 </template>
 
-
 <script setup lang="ts">
 import { reactive, ref, onMounted } from 'vue';
 import { ElMessage } from 'element-plus';
 import request from '/@/utils/request';
 import { useRoute } from 'vue-router';
+import { VideoPlay, VideoPause } from '@element-plus/icons-vue';
 
 const route = useRoute();
-const leftWidth = ref(50); // 左侧 div 初始宽度
+const leftWidth = ref(50);
 const state = reactive({
 	form: {} as any,
 	id: '' as any
@@ -68,9 +79,7 @@ const state = reactive({
 const getData = () => {
 	request.get('/api/videoRecords/' + state.id).then((res) => {
 		if (res.code == 0) {
-			// res.data = JSON.parse(res.data);
 			state.form = res.data;
-			console.log(state.form);
 		} else {
 			ElMessage.error(res.msg);
 		}
@@ -78,38 +87,25 @@ const getData = () => {
 };
 
 const playVideos = () => {
-    const leftVideo = document.querySelector('.left .video') as HTMLVideoElement;
-    const rightVideo = document.querySelector('.right .video') as HTMLVideoElement;
-
-    if (leftVideo) leftVideo.play();
-    if (rightVideo) rightVideo.play();
+    const videos = document.querySelectorAll('.analysis-video') as NodeListOf<HTMLVideoElement>;
+    videos.forEach(v => v.play());
 };
 
 const pauseVideos = () => {
-    const leftVideo = document.querySelector('.left .video') as HTMLVideoElement;
-    const rightVideo = document.querySelector('.right .video') as HTMLVideoElement;
-
-    if (leftVideo) leftVideo.pause();
-    if (rightVideo) rightVideo.pause();
+    const videos = document.querySelectorAll('.analysis-video') as NodeListOf<HTMLVideoElement>;
+    videos.forEach(v => v.pause());
 };
 
-
-// 拖动分割条
 const startDrag = (e: MouseEvent) => {
-	const cardsContainer = document.querySelector('.cards') as HTMLElement; // 获取父容器
+	const container = document.querySelector('.lab-workspace') as HTMLElement;
 	const startX = e.clientX;
 	const startLeftWidth = leftWidth.value;
-
-	const cardsContainerLeft = cardsContainer.getBoundingClientRect().left; // 获取父容器的左边位置
-	const cardsContainerWidth = cardsContainer.offsetWidth; // 获取父容器的宽度
+	const containerWidth = container.offsetWidth;
 
 	const onMouseMove = (moveEvent: MouseEvent) => {
 		const deltaX = moveEvent.clientX - startX;
-		let newLeftWidth = startLeftWidth + (deltaX / cardsContainerWidth) * 100;
-
-		// 限制左右区域的宽度范围为 0% 到 100%
-		newLeftWidth = Math.min(Math.max(newLeftWidth, 0), 100);
-		leftWidth.value = newLeftWidth;
+		let newLeftWidth = startLeftWidth + (deltaX / containerWidth) * 100;
+		leftWidth.value = Math.min(Math.max(newLeftWidth, 5), 95);
 	};
 
 	const onMouseUp = () => {
@@ -121,11 +117,8 @@ const startDrag = (e: MouseEvent) => {
 	document.addEventListener('mouseup', onMouseUp);
 };
 
-
 onMounted(() => {
-	//获取链接参数
 	state.id = route.query.id;
-	console.log(state.id);
 	getData()
 });
 </script>
@@ -134,99 +127,131 @@ onMounted(() => {
 .system-predict-container {
 	width: 100%;
 	height: 100%;
-	display: flex;
-	flex-direction: column;
-	background-color: #f5f7fa; /* 浅灰色背景 */
+	padding: 20px;
+	background: transparent;
 
-	.system-predict-padding {
-		padding: 20px;
-		width: 100%;
-		height: 100%;
-		box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1); /* 轻微阴影 */
-		border-radius: 8px;
-		background: #fff; /* 白色背景 */
-
-		.el-table {
-			flex: 1;
-		}
+	.glass-card {
+		background: rgba(255, 255, 255, 0.7);
+		backdrop-filter: blur(12px);
+		border: 1px solid rgba(255, 255, 255, 0.5);
+		border-radius: 16px;
+		box-shadow: 0 8px 32px rgba(0, 0, 0, 0.05);
 	}
 }
 
-.header {
-	width: 100%;
-	height: auto;
-	display: flex;
-	justify-content: start;
-	align-items: center;
-	gap: 20px; /* 等距对齐 */
-	padding-bottom: 10px;
-	border-bottom: 2px solid #e0e0e0; /* 分割线 */
-	font-size: 14px;
+.header-card {
+	padding: 16px 24px;
+	.header-content {
+		display: flex;
+		justify-content: space-between;
+		align-items: center;
+	}
+}
 
-	.model,
-	.height,
-	.username,
-	.startTime {
+.meta-section {
+	display: flex;
+	gap: 24px;
+	align-items: center;
+
+	.meta-item {
 		display: flex;
 		align-items: center;
-
-		text {
-			// font-weight: bold;
-			color: #333;
-			margin-right: 5px;
-		}
+		gap: 8px;
+		.label { font-size: 13px; color: #64748b; font-weight: 500; }
+		.value { font-size: 14px; color: #1e293b; font-weight: 600; }
 	}
 }
 
-.cards {
-	width: 100%;
-	height: calc(100% - 50px); /* 减去 header 高度 */
-	border-radius: 8px;
-	margin-top: 15px;
-	padding: 0px;
-	display: flex;
-	flex-direction: row;
+.analysis-lab {
+	height: calc(100% - 120px);
+	padding: 10px;
 	overflow: hidden;
-	background-color: #ffffff; /* 白色背景 */
-	box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1); /* 卡片阴影 */
+	
+	.lab-workspace {
+		width: 100%;
+		height: 100%;
+		display: flex;
+		background: #000;
+		border-radius: 12px;
+		overflow: hidden;
+		position: relative;
+	}
 }
 
-.left,
-.right {
-	flex-grow: 1;
-	height: 100%;
+.video-panel {
 	position: relative;
+	height: 100%;
 	display: flex;
 	justify-content: center;
 	align-items: center;
-	background: radial-gradient(circle, #d3e3f1 0%, #ffffff 100%);
-	border-radius: 8px;
-	border: 1px solid #e0e0e0; /* 边框 */
-	box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.05); /* 内部阴影 */
-}
+	overflow: hidden;
 
-.video {
-	width: 100%;
-	max-height: 100%;
-	height: auto;
-	object-fit: contain;
-	border-radius: 8px; /* 圆角视频 */
-	box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1); /* 视频阴影 */
-}
+	.panel-label {
+		position: absolute;
+		top: 16px;
+		left: 16px;
+		background: rgba(0,0,0,0.5);
+		color: #fff;
+		padding: 4px 12px;
+		border-radius: 4px;
+		font-size: 11px;
+		font-weight: 700;
+		letter-spacing: 1px;
+		z-index: 10;
+		border-left: 3px solid #94a3b8;
+	}
 
-/* 分割条样式 */
-.splitter {
-	cursor: ew-resize;
-	width: 3px; /* 加宽分割条 */
-	background: linear-gradient(to bottom, #d3e3f1, #a7bdd8);
-	border-left: none;
-	height: 100%;
-	transition: all 0.3s ease;
+	.ai-label {
+		border-left-color: #10B981;
+		background: rgba(16, 185, 129, 0.2);
+		backdrop-filter: blur(4px);
+	}
 
-	&:hover {
-		background: linear-gradient(to bottom, #a7bdd8, #d3e3f1);
-		box-shadow: 0 0 8px rgba(0, 0, 0, 0.2); /* 高亮效果 */
+	.analysis-video {
+		width: 100%;
+		height: 100%;
+		object-fit: contain;
 	}
 }
 
+.lab-splitter {
+	width: 6px;
+	background: rgba(255,255,255,0.1);
+	cursor: ew-resize;
+	position: relative;
+	z-index: 20;
+	transition: background 0.2s;
+
+	&:hover {
+		background: rgba(16, 185, 129, 0.5);
+		.splitter-handle { transform: translate(-50%, -50%) scale(1.2); }
+	}
+
+	.splitter-handle {
+		position: absolute;
+		top: 50%;
+		left: 50%;
+		transform: translate(-50%, -50%);
+		width: 24px;
+		height: 48px;
+		background: #fff;
+		border-radius: 12px;
+		display: flex;
+		flex-direction: column;
+		justify-content: center;
+		align-items: center;
+		gap: 4px;
+		box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+		transition: all 0.2s;
+
+		span {
+			width: 2px; height: 8px; background: #cbd5e1; border-radius: 2px;
+		}
+	}
+}
+
+.brand-tag {
+	font-weight: 700;
+	border-radius: 6px;
+}
 </style>

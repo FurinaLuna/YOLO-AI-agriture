@@ -1,0 +1,671 @@
+/**
+ * 智慧农业平台设计系统规范
+ * Smart Agriculture Design System
+ * 
+ * 本设计系统遵循现代 UI/UX 设计标准
+ * 参考 Material Design 3 和 Apple Human Interface Guidelines
+ * 
+ * 设计理念：
+ * - 自然生态：以绿色为主色调，体现农业生态主题
+ * - 科技智能：融合蓝色科技感，展现智能化特色
+ * - 专业可信：稳重的中性色系，建立专业信任感
+ * - 清晰高效：清晰的视觉层次，提升操作效率
+ */
+
+/* ============================================
+   一、色彩系统 (Color System)
+   ============================================ */
+
+:root {
+  /* 主色系 - Primary (生态绿) */
+  --color-primary-50: #ecfdf5;
+  --color-primary-100: #d1fae5;
+  --color-primary-200: #a7f3d0;
+  --color-primary-300: #6ee7b7;
+  --color-primary-400: #34d399;
+  --color-primary-500: #10b981;   /* 主品牌色 */
+  --color-primary-600: #059669;   /* 悬停态 */
+  --color-primary-700: #047857;   /* 按下态 */
+  --color-primary-800: #065f46;
+  --color-primary-900: #064e3b;
+  --color-primary-950: #022c22;
+
+  /* 辅助色系 - Secondary (科技蓝) */
+  --color-secondary-50: #eff6ff;
+  --color-secondary-100: #dbeafe;
+  --color-secondary-200: #bfdbfe;
+  --color-secondary-300: #93c5fd;
+  --color-secondary-400: #60a5fa;
+  --color-secondary-500: #3b82f6;   /* 辅助品牌色 */
+  --color-secondary-600: #2563eb;
+  --color-secondary-700: #1d4ed8;
+  --color-secondary-800: #1e40af;
+  --color-secondary-900: #1e3a8a;
+  --color-secondary-950: #172554;
+
+  /* 强调色系 - Accent (活力橙) */
+  --color-accent-50: #fff7ed;
+  --color-accent-100: #ffedd5;
+  --color-accent-200: #fed7aa;
+  --color-accent-300: #fdba74;
+  --color-accent-400: #fb923c;
+  --color-accent-500: #f97316;   /* 强调/警示色 */
+  --color-accent-600: #ea580c;
+  --color-accent-700: #c2410c;
+  --color-accent-800: #9a3412;
+  --color-accent-900: #7c2d12;
+
+  /* 功能色系 - Semantic Colors */
+  --color-success-light: #dcfce7;
+  --color-success: #22c55e;
+  --color-success-dark: #16a34a;
+
+  --color-warning-light: #fef3c7;
+  --color-warning: #f59e0b;
+  --color-warning-dark: #d97706;
+
+  --color-error-light: #fee2e2;
+  --color-error: #ef4444;
+  --color-error-dark: #dc2626;
+
+  --color-info-light: #dbeafe;
+  --color-info: #3b82f6;
+  --color-info-dark: #2563eb;
+
+  /* 中性色系 - Neutral (Slate) */
+  --color-neutral-0: #ffffff;
+  --color-neutral-50: #f8fafc;    /* 页面背景 */
+  --color-neutral-100: #f1f5f9;   /* 卡片背景 */
+  --color-neutral-200: #e2e8f0;   /* 边框/分割线 */
+  --color-neutral-300: #cbd5e1;   /* 禁用边框 */
+  --color-neutral-400: #94a3b8;   /* 占位文字 */
+  --color-neutral-500: #64748b;   /* 辅助文字 */
+  --color-neutral-600: #475569;   /* 正文文字 */
+  --color-neutral-700: #334155;   /* 标题文字 */
+  --color-neutral-800: #1e293b;   /* 强调文字 */
+  --color-neutral-900: #0f172a;   /* 最深文字 */
+  --color-neutral-950: #020617;
+
+  /* 渐变色 - Gradients */
+  --gradient-primary: linear-gradient(135deg, #10b981 0%, #059669 100%);
+  --gradient-primary-hover: linear-gradient(135deg, #34d399 0%, #10b981 100%);
+  --gradient-secondary: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+  --gradient-accent: linear-gradient(135deg, #f97316 0%, #ea580c 100%);
+  --gradient-hero: linear-gradient(135deg, #10b981 0%, #3b82f6 100%);
+  --gradient-glass: linear-gradient(135deg, rgba(255,255,255,0.9) 0%, rgba(255,255,255,0.7) 100%);
+  --gradient-mesh: 
+    radial-gradient(at 40% 20%, rgba(16, 185, 129, 0.08) 0px, transparent 50%),
+    radial-gradient(at 80% 0%, rgba(59, 130, 246, 0.06) 0px, transparent 50%),
+    radial-gradient(at 0% 50%, rgba(16, 185, 129, 0.05) 0px, transparent 50%),
+    radial-gradient(at 80% 50%, rgba(139, 92, 246, 0.04) 0px, transparent 50%),
+    radial-gradient(at 0% 100%, rgba(59, 130, 246, 0.05) 0px, transparent 50%),
+    radial-gradient(at 80% 100%, rgba(16, 185, 129, 0.06) 0px, transparent 50%);
+
+  /* 背景色 - Background */
+  --bg-page: var(--color-neutral-50);
+  --bg-card: rgba(255, 255, 255, 0.85);
+  --bg-card-hover: rgba(255, 255, 255, 0.95);
+  --bg-elevated: #ffffff;
+  --bg-overlay: rgba(15, 23, 42, 0.5);
+  --bg-glass: rgba(255, 255, 255, 0.7);
+}
+
+/* ============================================
+   二、字体系统 (Typography System)
+   ============================================ */
+
+:root {
+  /* 字体家族 */
+  --font-sans: "Inter", "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", "Source Han Sans CN", system-ui, -apple-system, sans-serif;
+  --font-mono: "JetBrains Mono", "Fira Code", "SF Mono", Consolas, "Liberation Mono", Menlo, monospace;
+  --font-display: "Inter", "PingFang SC", system-ui, sans-serif;
+
+  /* 字体大小 - 使用 rem 单位确保可访问性 */
+  --text-xs: 0.75rem;      /* 12px - 辅助文字、标签 */
+  --text-sm: 0.875rem;     /* 14px - 正文小号 */
+  --text-base: 1rem;       /* 16px - 正文基准 */
+  --text-lg: 1.125rem;     /* 18px - 大号正文 */
+  --text-xl: 1.25rem;      /* 20px - 小标题 */
+  --text-2xl: 1.5rem;      /* 24px - 标题 */
+  --text-3xl: 1.875rem;    /* 30px - 大标题 */
+  --text-4xl: 2.25rem;     /* 36px - 页面标题 */
+  --text-5xl: 3rem;        /* 48px - 展示标题 */
+
+  /* 字重 */
+  --font-weight-normal: 400;
+  --font-weight-medium: 500;
+  --font-weight-semibold: 600;
+  --font-weight-bold: 700;
+  --font-weight-extrabold: 800;
+
+  /* 行高 */
+  --leading-none: 1;
+  --leading-tight: 1.25;
+  --leading-snug: 1.375;
+  --leading-normal: 1.5;
+  --leading-relaxed: 1.625;
+  --leading-loose: 2;
+
+  /* 字间距 */
+  --tracking-tighter: -0.05em;
+  --tracking-tight: -0.025em;
+  --tracking-normal: 0;
+  --tracking-wide: 0.025em;
+  --tracking-wider: 0.05em;
+}
+
+/* 字体层级预设 */
+:root {
+  /* 展示标题 - Display */
+  --typography-display: var(--font-weight-extrabold) var(--text-5xl) / var(--leading-tight) var(--font-display);
+  
+  /* 页面标题 - H1 */
+  --typography-h1: var(--font-weight-bold) var(--text-4xl) / var(--leading-tight) var(--font-display);
+  
+  /* 区块标题 - H2 */
+  --typography-h2: var(--font-weight-bold) var(--text-3xl) / var(--leading-snug) var(--font-display);
+  
+  /* 卡片标题 - H3 */
+  --typography-h3: var(--font-weight-semibold) var(--text-2xl) / var(--leading-snug) var(--font-sans);
+  
+  /* 小标题 - H4 */
+  --typography-h4: var(--font-weight-semibold) var(--text-xl) / var(--leading-normal) var(--font-sans);
+  
+  /* 正文大号 */
+  --typography-body-lg: var(--font-weight-normal) var(--text-lg) / var(--leading-relaxed) var(--font-sans);
+  
+  /* 正文基准 */
+  --typography-body: var(--font-weight-normal) var(--text-base) / var(--leading-relaxed) var(--font-sans);
+  
+  /* 正文小号 */
+  --typography-body-sm: var(--font-weight-normal) var(--text-sm) / var(--leading-normal) var(--font-sans);
+  
+  /* 辅助文字 */
+  --typography-caption: var(--font-weight-medium) var(--text-xs) / var(--leading-normal) var(--font-sans);
+  
+  /* 标签文字 */
+  --typography-label: var(--font-weight-medium) var(--text-sm) / var(--leading-none) var(--font-sans);
+}
+
+/* ============================================
+   三、间距系统 (Spacing System)
+   基于 4px 网格系统
+   ============================================ */
+
+:root {
+  --space-0: 0;
+  --space-1: 0.25rem;    /* 4px */
+  --space-2: 0.5rem;     /* 8px */
+  --space-3: 0.75rem;    /* 12px */
+  --space-4: 1rem;       /* 16px */
+  --space-5: 1.25rem;    /* 20px */
+  --space-6: 1.5rem;     /* 24px */
+  --space-8: 2rem;       /* 32px */
+  --space-10: 2.5rem;    /* 40px */
+  --space-12: 3rem;      /* 48px */
+  --space-16: 4rem;      /* 64px */
+  --space-20: 5rem;      /* 80px */
+  --space-24: 6rem;      /* 96px */
+
+  /* 语义化间距 */
+  --space-section: var(--space-16);      /* 区块间距 */
+  --space-card-padding: var(--space-6);  /* 卡片内边距 */
+  --space-card-gap: var(--space-4);      /* 卡片间距 */
+  --space-form-gap: var(--space-4);      /* 表单间距 */
+  --space-list-gap: var(--space-3);      /* 列表间距 */
+}
+
+/* ============================================
+   四、圆角系统 (Border Radius)
+   ============================================ */
+
+:root {
+  --radius-none: 0;
+  --radius-sm: 0.25rem;     /* 4px - 小按钮、标签 */
+  --radius-md: 0.5rem;      /* 8px - 输入框、小卡片 */
+  --radius-lg: 0.75rem;     /* 12px - 按钮、中等卡片 */
+  --radius-xl: 1rem;        /* 16px - 大卡片 */
+  --radius-2xl: 1.5rem;     /* 24px - 模态框 */
+  --radius-full: 9999px;    /* 圆形 */
+
+  /* 语义化圆角 */
+  --radius-button: var(--radius-lg);
+  --radius-card: var(--radius-xl);
+  --radius-input: var(--radius-lg);
+  --radius-modal: var(--radius-2xl);
+  --radius-tag: var(--radius-full);
+}
+
+/* ============================================
+   五、阴影系统 (Shadow System)
+   ============================================ */
+
+:root {
+  /* 基础阴影 */
+  --shadow-xs: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+  --shadow-sm: 0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px -1px rgba(0, 0, 0, 0.1);
+  --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -2px rgba(0, 0, 0, 0.1);
+  --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -4px rgba(0, 0, 0, 0.1);
+  --shadow-xl: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.1);
+  --shadow-2xl: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+
+  /* 内阴影 */
+  --shadow-inner: inset 0 2px 4px 0 rgba(0, 0, 0, 0.05);
+
+  /* 品牌色阴影 - 增强品牌感 */
+  --shadow-primary-sm: 0 2px 8px rgba(16, 185, 129, 0.15);
+  --shadow-primary-md: 0 4px 14px rgba(16, 185, 129, 0.25);
+  --shadow-primary-lg: 0 8px 24px rgba(16, 185, 129, 0.35);
+
+  --shadow-secondary-sm: 0 2px 8px rgba(59, 130, 246, 0.15);
+  --shadow-secondary-md: 0 4px 14px rgba(59, 130, 246, 0.25);
+
+  /* 卡片阴影 */
+  --shadow-card: 0 1px 3px rgba(0, 0, 0, 0.04), 0 4px 12px rgba(0, 0, 0, 0.03);
+  --shadow-card-hover: 0 4px 12px rgba(0, 0, 0, 0.08), 0 8px 24px rgba(0, 0, 0, 0.04);
+
+  /* 弹出层阴影 */
+  --shadow-dropdown: 0 4px 16px rgba(0, 0, 0, 0.12);
+  --shadow-modal: 0 8px 32px rgba(0, 0, 0, 0.16);
+}
+
+/* ============================================
+   六、动效系统 (Animation System)
+   ============================================ */
+
+:root {
+  /* 持续时间 */
+  --duration-instant: 0ms;
+  --duration-fast: 150ms;
+  --duration-normal: 250ms;
+  --duration-slow: 350ms;
+  --duration-slower: 500ms;
+
+  /* 缓动函数 */
+  --ease-linear: linear;
+  --ease-in: cubic-bezier(0.4, 0, 1, 1);
+  --ease-out: cubic-bezier(0, 0, 0.2, 1);
+  --ease-in-out: cubic-bezier(0.4, 0, 0.2, 1);
+  --ease-bounce: cubic-bezier(0.68, -0.55, 0.265, 1.55);
+  --ease-spring: cubic-bezier(0.175, 0.885, 0.32, 1.275);
+
+  /* 预设动画 */
+  --transition-fast: var(--duration-fast) var(--ease-out);
+  --transition-normal: var(--duration-normal) var(--ease-out);
+  --transition-slow: var(--duration-slow) var(--ease-out);
+  --transition-bounce: var(--duration-slow) var(--ease-bounce);
+}
+
+/* ============================================
+   七、断点系统 (Breakpoint System)
+   ============================================ */
+
+:root {
+  --breakpoint-xs: 375px;    /* 小手机 */
+  --breakpoint-sm: 640px;    /* 大手机 */
+  --breakpoint-md: 768px;    /* 平板竖屏 */
+  --breakpoint-lg: 1024px;   /* 平板横屏/小笔记本 */
+  --breakpoint-xl: 1280px;   /* 桌面 */
+  --breakpoint-2xl: 1536px;  /* 大屏桌面 */
+  --breakpoint-3xl: 1920px;  /* 全高清 */
+}
+
+/* ============================================
+   八、Z-Index 层级系统
+   ============================================ */
+
+:root {
+  --z-dropdown: 1000;
+  --z-sticky: 1020;
+  --z-fixed: 1030;
+  --z-modal-backdrop: 1040;
+  --z-modal: 1050;
+  --z-popover: 1060;
+  --z-tooltip: 1070;
+  --z-toast: 1080;
+}
+
+/* ============================================
+   九、玻璃拟态效果 (Glassmorphism)
+   ============================================ */
+
+:root {
+  --glass-blur: 12px;
+  --glass-blur-strong: 20px;
+  --glass-bg: rgba(255, 255, 255, 0.7);
+  --glass-bg-dark: rgba(15, 23, 42, 0.8);
+  --glass-border: rgba(255, 255, 255, 0.5);
+  --glass-border-dark: rgba(255, 255, 255, 0.1);
+}
+
+/* 玻璃效果混入类 */
+.glass-effect {
+  background: var(--glass-bg);
+  backdrop-filter: blur(var(--glass-blur));
+  -webkit-backdrop-filter: blur(var(--glass-blur));
+  border: 1px solid var(--glass-border);
+}
+
+.glass-effect-strong {
+  background: rgba(255, 255, 255, 0.85);
+  backdrop-filter: blur(var(--glass-blur-strong));
+  -webkit-backdrop-filter: blur(var(--glass-blur-strong));
+  border: 1px solid rgba(255, 255, 255, 0.6);
+}
+
+/* ============================================
+   十、组件预设样式
+   ============================================ */
+
+:root {
+  /* 按钮 */
+  --btn-height-sm: 32px;
+  --btn-height-md: 40px;
+  --btn-height-lg: 48px;
+  --btn-padding-x: var(--space-4);
+  --btn-font-weight: var(--font-weight-semibold);
+
+  /* 输入框 */
+  --input-height-sm: 32px;
+  --input-height-md: 40px;
+  --input-height-lg: 48px;
+  --input-padding-x: var(--space-3);
+  --input-bg: var(--color-neutral-50);
+  --input-border: var(--color-neutral-200);
+  --input-focus-border: var(--color-primary-500);
+  --input-focus-shadow: 0 0 0 3px rgba(16, 185, 129, 0.15);
+
+  /* 卡片 */
+  --card-bg: var(--bg-card);
+  --card-border: rgba(0, 0, 0, 0.05);
+  --card-shadow: var(--shadow-card);
+  --card-padding: var(--space-6);
+  --card-radius: var(--radius-xl);
+}
+
+/* ============================================
+   十一、辅助工具类
+   ============================================ */
+
+/* 文字截断 */
+.text-truncate {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* 多行截断 */
+.text-clamp-2 {
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.text-clamp-3 {
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+/* 平滑滚动 */
+.smooth-scroll {
+  scroll-behavior: smooth;
+}
+
+/* 隐藏滚动条但保持滚动功能 */
+.hide-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+  &::-webkit-scrollbar {
+    display: none;
+  }
+}
+
+/* 自定义滚动条 */
+.custom-scrollbar {
+  &::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+  }
+  &::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  &::-webkit-scrollbar-thumb {
+    background: rgba(0, 0, 0, 0.15);
+    border-radius: 3px;
+    &:hover {
+      background: rgba(0, 0, 0, 0.25);
+    }
+  }
+}
+
+/* 焦点环 */
+.focus-ring {
+  &:focus-visible {
+    outline: none;
+    box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.4);
+  }
+}
+
+/* 过渡动画基础类 */
+.transition-base {
+  transition: all var(--transition-normal);
+}
+
+.transition-transform {
+  transition: transform var(--transition-normal);
+}
+
+.transition-opacity {
+  transition: opacity var(--transition-normal);
+}
+
+/* 悬停上浮效果 */
+.hover-lift {
+  transition: transform var(--transition-normal), box-shadow var(--transition-normal);
+  &:hover {
+    transform: translateY(-4px);
+    box-shadow: var(--shadow-card-hover);
+  }
+}
+
+/* 悬停发光效果 */
+.hover-glow {
+  transition: box-shadow var(--transition-normal);
+  &:hover {
+    box-shadow: var(--shadow-primary-md);
+  }
+}
+
+/* ============================================
+   十二、动画关键帧
+   ============================================ */
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes fadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes fadeInDown {
+  from {
+    opacity: 0;
+    transform: translateY(-20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes fadeInLeft {
+  from {
+    opacity: 0;
+    transform: translateX(-20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+@keyframes fadeInRight {
+  from {
+    opacity: 0;
+    transform: translateX(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+@keyframes scaleIn {
+  from {
+    opacity: 0;
+    transform: scale(0.95);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+@keyframes slideInUp {
+  from {
+    transform: translateY(100%);
+  }
+  to {
+    transform: translateY(0);
+  }
+}
+
+@keyframes pulse {
+  0%, 100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.5;
+  }
+}
+
+@keyframes spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@keyframes bounce {
+  0%, 100% {
+    transform: translateY(-25%);
+    animation-timing-function: cubic-bezier(0.8, 0, 1, 1);
+  }
+  50% {
+    transform: translateY(0);
+    animation-timing-function: cubic-bezier(0, 0, 0.2, 1);
+  }
+}
+
+@keyframes shimmer {
+  0% {
+    background-position: -200% 0;
+  }
+  100% {
+    background-position: 200% 0;
+  }
+}
+
+/* 骨架屏动画 */
+.skeleton-loading {
+  background: linear-gradient(
+    90deg,
+    var(--color-neutral-100) 25%,
+    var(--color-neutral-200) 50%,
+    var(--color-neutral-100) 75%
+  );
+  background-size: 200% 100%;
+  animation: shimmer 1.5s infinite;
+}
+
+/* 打字指示器动画 */
+@keyframes typingDot {
+  0%, 80%, 100% {
+    transform: scale(0.6);
+    opacity: 0.4;
+  }
+  40% {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+
+.typing-indicator {
+  display: flex;
+  gap: 4px;
+  span {
+    width: 8px;
+    height: 8px;
+    background: var(--color-primary-500);
+    border-radius: 50%;
+    animation: typingDot 1.4s infinite ease-in-out;
+    &:nth-child(1) { animation-delay: -0.32s; }
+    &:nth-child(2) { animation-delay: -0.16s; }
+    &:nth-child(3) { animation-delay: 0s; }
+  }
+}
+
+/* ============================================
+   十三、响应式工具
+   ============================================ */
+
+/* 响应式隐藏 */
+@media (max-width: 639px) {
+  .hide-xs { display: none !important; }
+}
+@media (min-width: 640px) and (max-width: 767px) {
+  .hide-sm { display: none !important; }
+}
+@media (min-width: 768px) and (max-width: 1023px) {
+  .hide-md { display: none !important; }
+}
+@media (min-width: 1024px) and (max-width: 1279px) {
+  .hide-lg { display: none !important; }
+}
+@media (min-width: 1280px) {
+  .hide-xl { display: none !important; }
+}
+
+.show-mobile {
+  display: none !important;
+}
+
+@media (max-width: 767px) {
+  .show-mobile {
+    display: block !important;
+  }
+}
+
+.show-desktop {
+  display: block !important;
+}
+
+@media (max-width: 767px) {
+  .show-desktop {
+    display: none !important;
+  }
+}

@@ -1,10 +1,14 @@
 <script setup lang="ts">
-import { ref, onMounted, onUnmounted, nextTick } from 'vue'
+import { ref, onMounted, onUnmounted, nextTick, computed } from 'vue'
+import { useRouter } from 'vue-router'
 import * as echarts from 'echarts'
-import { ElCard, ElButton, ElTag } from 'element-plus'
+import { ElCard, ElButton, ElTag, ElSkeleton, ElSkeletonItem } from 'element-plus'
 import 'element-plus/dist/index.css'
 
-// 统计数据
+const router = useRouter()
+
+const isLoading = ref(true)
+
 const statistics = ref({
   users: 42,
   greenhouse: 9,
@@ -12,17 +16,21 @@ const statistics = ref({
   yield: 1232
 })
 
-// 图表实例
+const animatedStats = ref({
+  users: 0,
+  greenhouse: 0,
+  diseases: 0,
+  yield: 0
+})
+
 let diseaseDistChart: echarts.ECharts
 let plantingStatsChart: echarts.ECharts
 
-// 今日日期
 const today = ref({
   date: '',
   weekday: ''
 })
 
-// 天气信息
 const weatherInfo = ref({
   temperature: '24°C',
   weather: '晴转多云',
@@ -31,25 +39,72 @@ const weatherInfo = ref({
   notice: '当前气象条件适宜农事活动，建议进行作物追肥。'
 })
 
-// 作物状态数据
 const cropTypes = ref([
-  { name: '1号温室', crop: '玉米', status: '生长良好', plantCount: 350, diseaseCount: 0 },
-  { name: '2号温室', crop: '水稻', status: '生长良好', plantCount: 400, diseaseCount: 2 },
-  { name: '3号温室', crop: '小麦', status: '异常预警', plantCount: 350, diseaseCount: 18 },
-  { name: '4号温室', crop: '马铃薯', status: '生长良好', plantCount: 250, diseaseCount: 1 },
-  { name: '5号温室', crop: '棉花', status: '生长良好', plantCount: 300, diseaseCount: 3 },
-  { name: '6号温室', crop: '苹果', status: '需要关注', plantCount: 128, diseaseCount: 14 }
+  { name: '1号温室', crop: '玉米', status: '生长良好', plantCount: 350, diseaseCount: 0, trend: 'up' },
+  { name: '2号温室', crop: '水稻', status: '生长良好', plantCount: 400, diseaseCount: 2, trend: 'stable' },
+  { name: '3号温室', crop: '小麦', status: '异常预警', plantCount: 350, diseaseCount: 18, trend: 'down' },
+  { name: '4号温室', crop: '马铃薯', status: '生长良好', plantCount: 250, diseaseCount: 1, trend: 'up' },
+  { name: '5号温室', crop: '棉花', status: '生长良好', plantCount: 300, diseaseCount: 3, trend: 'stable' },
+  { name: '6号温室', crop: '苹果', status: '需要关注', plantCount: 128, diseaseCount: 14, trend: 'down' }
 ])
 
-// 农业链接
 const agricultureLinks = ref([
-  { name: '中国农村网', url: 'https://www.crnews.net/', icon: 'icon-nongye' },
-  { name: '中国农业网', url: 'https://www.zgny.com/', icon: 'icon-keji' },
-  { name: '国家农业数据中心', url: 'https://www.agridata.cn/', icon: 'icon-qixiang' },
-  { name: '农业科技报', url: 'https://www.nkb.com.cn/', icon: 'icon-zhihui' }
+  { name: '中国农村网', url: 'https://www.crnews.net/', icon: 'icon-nongye', desc: '政策资讯' },
+  { name: '中国农业网', url: 'https://www.zgny.com/', icon: 'icon-keji', desc: '行业动态' },
+  { name: '国家农业数据中心', url: 'https://www.agridata.cn/', icon: 'icon-qixiang', desc: '数据服务' },
+  { name: '农业科技报', url: 'https://www.nkb.com.cn/', icon: 'icon-zhihui', desc: '科技前沿' }
 ])
 
-// 获取实时天气数据 (模拟原有逻辑)
+const quickActions = computed(() => [
+  { 
+    name: 'GLM 助手', 
+    path: '/smartChat', 
+    icon: 'icon-znwd', 
+    color: 'secondary',
+    desc: 'AI智能问答'
+  },
+  { 
+    name: '图片检测', 
+    path: '/imgPredict', 
+    icon: 'icon-tpjc', 
+    color: 'primary',
+    desc: '病害识别'
+  },
+  { 
+    name: '视频监控', 
+    path: '/videoPredict', 
+    icon: 'icon-spjc', 
+    color: 'accent',
+    desc: '实时监测'
+  },
+  { 
+    name: '病害百科', 
+    path: '/infoDisease', 
+    icon: 'icon-bingchonghai-1haichong', 
+    color: 'neutral',
+    desc: '知识库'
+  }
+])
+
+const animateNumber = (target: keyof typeof animatedStats, end: number, duration = 1500) => {
+  const start = 0
+  const startTime = performance.now()
+  
+  const update = (currentTime: number) => {
+    const elapsed = currentTime - startTime
+    const progress = Math.min(elapsed / duration, 1)
+    const easeOut = 1 - Math.pow(1 - progress, 3)
+    
+    animatedStats.value[target] = Math.floor(start + (end - start) * easeOut)
+    
+    if (progress < 1) {
+      requestAnimationFrame(update)
+    }
+  }
+  
+  requestAnimationFrame(update)
+}
+
 const fetchWeatherData = async () => {
   const date = new Date()
   const weekdays = ['周日', '周一', '周二', '周三', '周四', '周五', '周六']
@@ -73,24 +128,56 @@ const fetchWeatherData = async () => {
   }
 }
 
-// 初始化 ECharts 图表（升级配色与交互）
 const initCharts = () => {
   const pieDom = document.getElementById('diseasePieChart')
   if (pieDom) {
     diseaseDistChart = echarts.init(pieDom)
     diseaseDistChart.setOption({
       backgroundColor: 'transparent',
-      tooltip: { trigger: 'item', padding: 10, borderRadius: 8 },
-      legend: { bottom: '5%', icon: 'circle', textStyle: { color: '#64748b' } },
-      color: ['#10B981', '#3B82F6', '#6366F1', '#F59E0B', '#EF4444'],
+      tooltip: { 
+        trigger: 'item', 
+        padding: [12, 16],
+        borderRadius: 12,
+        backgroundColor: 'rgba(255, 255, 255, 0.95)',
+        borderColor: 'rgba(0, 0, 0, 0.05)',
+        borderWidth: 1,
+        textStyle: { color: '#334155', fontSize: 13 },
+        extraCssText: 'box-shadow: 0 4px 16px rgba(0, 0, 0, 0.1);'
+      },
+      legend: { 
+        bottom: '0%', 
+        icon: 'circle',
+        itemWidth: 8,
+        itemHeight: 8,
+        itemGap: 16,
+        textStyle: { color: '#64748b', fontSize: 12 }
+      },
+      color: ['#10B981', '#3B82F6', '#8B5CF6', '#F59E0B', '#EF4444'],
       series: [{
         name: '病害种类',
         type: 'pie',
-        radius: ['55%', '75%'],
+        radius: ['50%', '72%'],
+        center: ['50%', '45%'],
         avoidLabelOverlap: false,
-        itemStyle: { borderRadius: 10, borderColor: '#fff', borderWidth: 4 },
+        itemStyle: { 
+          borderRadius: 8, 
+          borderColor: '#fff', 
+          borderWidth: 3 
+        },
         label: { show: false },
-        emphasis: { label: { show: true, fontSize: 16, fontWeight: 'bold' } },
+        emphasis: { 
+          label: { 
+            show: true, 
+            fontSize: 14, 
+            fontWeight: '600',
+            color: '#1e293b'
+          },
+          itemStyle: {
+            shadowBlur: 20,
+            shadowOffsetX: 0,
+            shadowColor: 'rgba(0, 0, 0, 0.15)'
+          }
+        },
         data: [
           { value: 45, name: '水稻稻瘟病' },
           { value: 30, name: '玉米锈病' },
@@ -107,35 +194,57 @@ const initCharts = () => {
     plantingStatsChart = echarts.init(lineDom)
     plantingStatsChart.setOption({
       backgroundColor: 'transparent',
-      tooltip: { trigger: 'axis', axisPointer: { type: 'cross' } },
-      grid: { left: '4%', right: '4%', bottom: '10%', top: '15%', containLabel: true },
+      tooltip: { 
+        trigger: 'axis', 
+        axisPointer: { 
+          type: 'cross',
+          crossStyle: { color: '#94a3b8' }
+        },
+        padding: [12, 16],
+        borderRadius: 12,
+        backgroundColor: 'rgba(255, 255, 255, 0.95)',
+        borderColor: 'rgba(0, 0, 0, 0.05)',
+        borderWidth: 1,
+        textStyle: { color: '#334155', fontSize: 13 }
+      },
+      grid: { 
+        left: '3%', 
+        right: '4%', 
+        bottom: '12%', 
+        top: '12%', 
+        containLabel: true 
+      },
       xAxis: { 
         type: 'category', 
-        data: ['1月', '3月', '5月', '7月', '9月', '11月'],
+        data: ['1月', '2月', '3月', '4月', '5月', '6月', '7月', '8月', '9月', '10月', '11月', '12月'],
         axisLine: { lineStyle: { color: '#e2e8f0' } },
-        axisLabel: { color: '#94a3b8' }
+        axisLabel: { color: '#94a3b8', fontSize: 11 },
+        axisTick: { show: false }
       },
       yAxis: { 
         type: 'value', 
-        name: '预估产量/吨',
+        name: '产量(吨)',
+        nameTextStyle: { color: '#94a3b8', fontSize: 11 },
         splitLine: { lineStyle: { color: '#f1f5f9', type: 'dashed' } },
-        axisLabel: { color: '#94a3b8' }
+        axisLabel: { color: '#94a3b8', fontSize: 11 },
+        axisLine: { show: false },
+        axisTick: { show: false }
       },
       series: [{
         name: '预估产量',
         type: 'line',
         smooth: true,
         symbol: 'circle',
-        symbolSize: 8,
+        symbolSize: 6,
         lineStyle: { width: 3, color: '#10B981' },
-        itemStyle: { color: '#10B981' },
+        itemStyle: { color: '#10B981', borderWidth: 2 },
         areaStyle: {
           color: new echarts.graphic.LinearGradient(0, 0, 0, 1, [
-            { offset: 0, color: 'rgba(16,185,129,0.2)' },
-            { offset: 1, color: 'rgba(16,185,129,0.01)' }
+            { offset: 0, color: 'rgba(16,185,129,0.25)' },
+            { offset: 1, color: 'rgba(16,185,129,0.02)' }
           ])
         },
-        data: [220, 310, 420, 580, 750, 890]
+        data: [180, 220, 310, 420, 530, 580, 650, 720, 750, 820, 890, 950]
       }]
     })
   }
@@ -146,12 +255,37 @@ const handleResize = () => {
   plantingStatsChart?.resize()
 }
 
+const navigateTo = (path: string) => {
+  router.push(path)
+}
+
+const getStatusType = (status: string) => {
+  if (status === '异常预警') return 'danger'
+  if (status === '需要关注') return 'warning'
+  return 'success'
+}
+
+const getTrendIcon = (trend: string) => {
+  if (trend === 'up') return '↑'
+  if (trend === 'down') return '↓'
+  return '→'
+}
+
 onMounted(() => {
   fetchWeatherData()
-  nextTick(() => {
-    initCharts()
-    window.addEventListener('resize', handleResize)
-  })
+  
+  setTimeout(() => {
+    isLoading.value = false
+    nextTick(() => {
+      initCharts()
+      window.addEventListener('resize', handleResize)
+      
+      animateNumber('users', statistics.value.users)
+      animateNumber('greenhouse', statistics.value.greenhouse)
+      animateNumber('diseases', statistics.value.diseases)
+      animateNumber('yield', statistics.value.yield)
+    })
+  }, 500)
 })
 
 onUnmounted(() => {
@@ -162,182 +296,245 @@ onUnmounted(() => {
 </script>
 
 <template>
-  <div class="home-view">
-    
-    <!-- 1. 顶部数据概览卡片 (SaaS Metrics) -->
-    <div class="metrics-row animate__animated animate__fadeInDown">
-      <div class="metric-card">
-        <div class="ico-bg b-em">
-          <i class="iconfontjs icon-yh"></i>
+  <div class="dashboard">
+    <div class="metrics-grid animate-fade-in-down">
+      <div class="metric-card" v-for="(stat, key) in statistics" :key="key">
+        <div class="metric-icon" :class="`metric-icon--${key}`">
+          <i :class="[
+            'iconfontjs',
+            key === 'users' ? 'icon-yh' : 
+            key === 'greenhouse' ? 'icon-znws' : 
+            key === 'diseases' ? 'icon-bingchonghai-1haichong' : 'icon-cc'
+          ]"></i>
         </div>
-        <div class="m-content">
-          <div class="v">{{ statistics.users }}</div>
-          <div class="l">活跃用户</div>
+        <div class="metric-content">
+          <div class="metric-value">{{ animatedStats[key as keyof typeof animatedStats] }}</div>
+          <div class="metric-label">
+            {{ key === 'users' ? '活跃用户' : 
+               key === 'greenhouse' ? '受控温室' : 
+               key === 'diseases' ? '病害记录' : '年度产量(t)' }}
+          </div>
         </div>
-      </div>
-      <div class="metric-card">
-        <div class="ico-bg b-bl">
-          <i class="iconfontjs icon-znws"></i>
-        </div>
-        <div class="m-content">
-          <div class="v">{{ statistics.greenhouse }}</div>
-          <div class="l">受控温室</div>
-        </div>
-      </div>
-      <div class="metric-card">
-        <div class="ico-bg b-or">
-          <i class="iconfontjs icon-bingchonghai-1haichong"></i>
-        </div>
-        <div class="m-content">
-          <div class="v">{{ statistics.diseases }}</div>
-          <div class="l">病害记录</div>
-        </div>
-      </div>
-      <div class="metric-card">
-        <div class="ico-bg b-pu">
-          <i class="iconfontjs icon-cc"></i>
-        </div>
-        <div class="m-content">
-          <div class="v">{{ statistics.yield }}</div>
-          <div class="l">年度产量(t)</div>
+        <div class="metric-trend" v-if="key !== 'diseases'">
+          <span class="trend-up">+12%</span>
         </div>
       </div>
     </div>
 
     <div class="main-grid">
-      <!-- 2. 系统公告 & 天气 (左侧/中侧) -->
-      <div class="left-col animate__animated animate__fadeInLeft">
-        <el-card class="glass-card mb-4 notice-container">
+      <div class="left-column animate-fade-in-left">
+        <el-card class="glass-card notice-card">
           <template #header>
-            <div class="c-header">
-              <span class="dot-green"></span>
-              <h4>平台核心公告</h4>
+            <div class="card-header">
+              <span class="status-dot"></span>
+              <h4 class="card-title">平台公告</h4>
             </div>
           </template>
-          <div class="n-body">
-            尊敬的农研专家：本平台已深度集成 <strong>智谱 GLM-4 智能助研</strong> 引擎，支持实时病害图像识别与农事策略生成。请通过“图片检测”或“智能助手”模块开启您的智慧农研之旅。
+          <div class="notice-content">
+            <p>
+              尊敬的农研专家：本平台已深度集成 <strong class="highlight">智谱 GLM-4 智能助研</strong> 引擎，
+              支持实时病害图像识别与农事策略生成。请通过"图片检测"或"智能助手"模块开启您的智慧农研之旅。
+            </p>
           </div>
         </el-card>
 
-        <el-card class="glass-card weather-container">
+        <el-card class="glass-card weather-card">
           <template #header>
-            <div class="c-header">
-              <i class="iconfontjs icon-qixiang text-blue-500 mr-2"></i>
-              <h4>产区实时气象</h4>
+            <div class="card-header">
+              <i class="iconfontjs icon-qixiang weather-icon"></i>
+              <h4 class="card-title">产区气象</h4>
             </div>
           </template>
-          <div class="w-body">
-            <div class="w-main">
-              <span class="temp">{{ weatherInfo.temperature }}</span>
-              <div class="w-status">
-                <div class="txt">{{ weatherInfo.weather }}</div>
-                <div class="day">{{ today.weekday }} · {{ today.date }}</div>
+          <div class="weather-content">
+            <div class="weather-main">
+              <span class="temperature">{{ weatherInfo.temperature }}</span>
+              <div class="weather-status">
+                <div class="weather-text">{{ weatherInfo.weather }}</div>
+                <div class="weather-date">{{ today.weekday }} · {{ today.date }}</div>
               </div>
             </div>
-            <div class="w-grid">
-              <div class="wi"><span>湿度:</span> {{ weatherInfo.humidity }}</div>
-              <div class="wi"><span>风力:</span> {{ weatherInfo.wind }}</div>
+            <div class="weather-details">
+              <div class="detail-item">
+                <span class="detail-label">湿度</span>
+                <span class="detail-value">{{ weatherInfo.humidity }}</span>
+              </div>
+              <div class="detail-item">
+                <span class="detail-label">风力</span>
+                <span class="detail-value">{{ weatherInfo.wind }}</span>
+              </div>
             </div>
-            <div class="w-notice">
-              <i class="iconfontjs icon-znwd mr-1"></i> {{ weatherInfo.notice }}
+            <div class="weather-notice">
+              <i class="iconfontjs icon-znwd"></i>
+              <span>{{ weatherInfo.notice }}</span>
             </div>
           </div>
         </el-card>
       </div>
 
-      <!-- 3. 常用应用 (右侧缩略) -->
-      <div class="right-col animate__animated animate__fadeInRight">
-        <el-card class="glass-card app-card">
+      <div class="right-column animate-fade-in-right">
+        <el-card class="glass-card actions-card">
           <template #header>
-            <div class="c-header">
-              <h4>快捷农技入口</h4>
-              <el-button link type="primary" size="small">更多</el-button>
+            <div class="card-header">
+              <h4 class="card-title">快捷入口</h4>
+              <el-button link type="primary" size="small" class="more-btn">更多</el-button>
             </div>
           </template>
-          <div class="app-grid">
-            <div class="ai" @click="$router.push('/smartChat')">
-              <div class="ai-box b-bl"><i class="iconfontjs icon-znwd"></i></div>
-              <span>GLM 助手</span>
-            </div>
-            <div class="ai" @click="$router.push('/imgPredict')">
-              <div class="ai-box b-em"><i class="iconfontjs icon-tpjc"></i></div>
-              <span>图片检测</span>
-            </div>
-            <div class="ai" @click="$router.push('/videoPredict')">
-              <div class="ai-box b-or"><i class="iconfontjs icon-spjc"></i></div>
-              <span>视频监控</span>
-            </div>
-            <div class="ai" @click="$router.push('/infoDisease')">
-              <div class="ai-box b-pu"><i class="iconfontjs icon-bingchonghai-1haichong"></i></div>
-              <span>病害百科</span>
+          <div class="actions-grid">
+            <div 
+              v-for="action in quickActions" 
+              :key="action.path"
+              class="action-item"
+              @click="navigateTo(action.path)"
+            >
+              <div class="action-icon" :class="`action-icon--${action.color}`">
+                <i :class="['iconfontjs', action.icon]"></i>
+              </div>
+              <div class="action-info">
+                <span class="action-name">{{ action.name }}</span>
+                <span class="action-desc">{{ action.desc }}</span>
+              </div>
             </div>
           </div>
         </el-card>
 
-        <!-- 农业外链 -->
-         <el-card class="glass-card mt-4 links-container">
+        <el-card class="glass-card links-card">
           <div class="links-list">
-            <a v-for="link in agricultureLinks" :key="link.name" :href="link.url" target="_blank" class="l-item">
-              {{ link.name }} <i class="iconfontjs icon-tpjl"></i>
+            <a 
+              v-for="link in agricultureLinks" 
+              :key="link.name" 
+              :href="link.url" 
+              target="_blank" 
+              class="link-item"
+            >
+              <div class="link-info">
+                <i :class="['iconfontjs', link.icon]"></i>
+                <div class="link-text">
+                  <span class="link-name">{{ link.name }}</span>
+                  <span class="link-desc">{{ link.desc }}</span>
+                </div>
+              </div>
+              <i class="iconfontjs icon-tpjl link-arrow"></i>
             </a>
           </div>
-         </el-card>
+        </el-card>
       </div>
     </div>
 
-    <!-- 4. 数据图表行 -->
-    <div class="charts-row animate__animated animate__fadeInUp">
-      <el-card class="glass-card p-chart">
+    <div class="charts-grid animate-fade-in-up">
+      <el-card class="glass-card chart-card chart-card--pie">
         <template #header>
-          <div class="c-header"><h4>重点病害分布统计</h4></div>
+          <div class="card-header">
+            <h4 class="card-title">病害分布统计</h4>
+            <span class="card-subtitle">本月数据</span>
+          </div>
         </template>
-        <div id="diseasePieChart" class="chart-box"></div>
+        <div id="diseasePieChart" class="chart-container"></div>
       </el-card>
-      <el-card class="glass-card l-chart">
+      
+      <el-card class="glass-card chart-card chart-card--line">
         <template #header>
-          <div class="c-header"><h4>年度预估产量趋势 (2025)</h4></div>
+          <div class="card-header">
+            <h4 class="card-title">年度产量趋势</h4>
+            <span class="card-subtitle">2025年预估</span>
+          </div>
         </template>
-        <div id="yieldLineChart" class="chart-box"></div>
+        <div id="yieldLineChart" class="chart-container"></div>
       </el-card>
     </div>
 
-    <!-- 5. 温室作物状态 -->
-    <div class="greenhouse-section animate__animated animate__fadeInUp animate__delay-1s">
-      <div class="section-title">
-        <span class="v-line"></span>
-        <h3>温室作物实时监测</h3>
+    <div class="greenhouse-section animate-fade-in-up">
+      <div class="section-header">
+        <div class="section-indicator"></div>
+        <h3 class="section-title">温室作物实时监测</h3>
+        <el-button link type="primary" size="small" @click="navigateTo('/infoGreenhouse')">
+          查看全部 →
+        </el-button>
       </div>
-      <div class="gh-grid">
-        <div v-for="gh in cropTypes" :key="gh.name" class="gh-card">
-          <div class="gh-head">
-            <span class="name">{{ gh.name }}</span>
-            <el-tag :type="gh.status === '异常预警' ? 'danger' : gh.status === '需要关注' ? 'warning' : 'success'" size="small" effect="dark">
+      
+      <div class="greenhouse-grid">
+        <div 
+          v-for="gh in cropTypes" 
+          :key="gh.name" 
+          class="greenhouse-card"
+          :class="{ 'greenhouse-card--alert': gh.status === '异常预警' }"
+        >
+          <div class="gh-header">
+            <span class="gh-name">{{ gh.name }}</span>
+            <el-tag :type="getStatusType(gh.status)" size="small" effect="dark" class="gh-status">
               {{ gh.status }}
             </el-tag>
           </div>
           <div class="gh-body">
-            <div class="row"><span>作物种类:</span> <strong>{{ gh.crop }}</strong></div>
-            <div class="row"><span>植株总量:</span> {{ gh.plantCount }}</div>
-            <div class="row" :class="{'err': gh.diseaseCount > 10}">
-              <span>病害发现:</span> {{ gh.diseaseCount }}
+            <div class="gh-row">
+              <span class="gh-label">作物种类</span>
+              <strong class="gh-value">{{ gh.crop }}</strong>
+            </div>
+            <div class="gh-row">
+              <span class="gh-label">植株总量</span>
+              <span class="gh-value">{{ gh.plantCount }}</span>
+            </div>
+            <div class="gh-row" :class="{ 'gh-row--error': gh.diseaseCount > 10 }">
+              <span class="gh-label">病害发现</span>
+              <span class="gh-value">
+                {{ gh.diseaseCount }}
+                <span v-if="gh.diseaseCount > 10" class="trend-badge trend-badge--danger">
+                  {{ getTrendIcon(gh.trend) }}
+                </span>
+              </span>
             </div>
           </div>
         </div>
       </div>
     </div>
-
   </div>
 </template>
 
 <style scoped lang="scss">
-.home-view {
+.dashboard {
   padding: 24px;
-  background: transparent;
   min-height: 100%;
+  background: var(--gradient-mesh);
 }
 
-/* 1. Metrics */
-.metrics-row {
+/* 动画 */
+.animate-fade-in-down {
+  animation: fadeInDown 0.5s ease-out;
+}
+
+.animate-fade-in-left {
+  animation: fadeInLeft 0.5s ease-out 0.1s both;
+}
+
+.animate-fade-in-right {
+  animation: fadeInRight 0.5s ease-out 0.1s both;
+}
+
+.animate-fade-in-up {
+  animation: fadeInUp 0.5s ease-out 0.2s both;
+}
+
+@keyframes fadeInDown {
+  from { opacity: 0; transform: translateY(-20px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes fadeInLeft {
+  from { opacity: 0; transform: translateX(-20px); }
+  to { opacity: 1; transform: translateX(0); }
+}
+
+@keyframes fadeInRight {
+  from { opacity: 0; transform: translateX(20px); }
+  to { opacity: 1; transform: translateX(0); }
+}
+
+@keyframes fadeInUp {
+  from { opacity: 0; transform: translateY(20px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+/* 指标卡片 */
+.metrics-grid {
   display: grid;
   grid-template-columns: repeat(4, 1fr);
   gap: 20px;
@@ -345,196 +542,496 @@ onUnmounted(() => {
 }
 
 .metric-card {
-  background: rgba(255, 255, 255, 0.7);
+  background: rgba(255, 255, 255, 0.85);
   backdrop-filter: blur(12px);
-  border: 1px solid rgba(255, 255, 255, 0.5);
-  padding: 24px;
+  border: 1px solid rgba(255, 255, 255, 0.6);
   border-radius: 16px;
+  padding: 24px;
   display: flex;
   align-items: center;
-  gap: 20px;
-  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.03);
-  transition: transform 0.3s ease;
+  gap: 16px;
+  box-shadow: var(--shadow-card);
+  transition: all 0.3s ease;
+  position: relative;
+  overflow: hidden;
 
   &:hover {
-    transform: translateY(-5px);
-    background: rgba(255, 255, 255, 0.85);
-  }
-
-  .ico-bg {
-    width: 56px;
-    height: 56px;
-    border-radius: 12px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    i { font-size: 24px; color: #fff; }
-  }
-  .b-em { background: linear-gradient(135deg, #10B981, #059669); }
-  .b-bl { background: linear-gradient(135deg, #3B82F6, #2563EB); }
-  .b-or { background: linear-gradient(135deg, #F59E0B, #D97706); }
-  .b-pu { background: linear-gradient(135deg, #8B5CF6, #7C3AED); }
-
-  .m-content {
-    .v { font-size: 26px; font-weight: 800; color: #1e293b; line-height: 1; margin-bottom: 4px; }
-    .l { font-size: 13px; color: #64748b; font-weight: 500; }
+    transform: translateY(-4px);
+    box-shadow: var(--shadow-card-hover);
+    background: rgba(255, 255, 255, 0.95);
   }
 }
 
-/* 2. Layout Grid */
+.metric-icon {
+  width: 56px;
+  height: 56px;
+  border-radius: 14px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+
+  i { font-size: 24px; color: white; }
+
+  &--users { background: linear-gradient(135deg, #10B981, #059669); }
+  &--greenhouse { background: linear-gradient(135deg, #3B82F6, #2563EB); }
+  &--diseases { background: linear-gradient(135deg, #F59E0B, #D97706); }
+  &--yield { background: linear-gradient(135deg, #8B5CF6, #7C3AED); }
+}
+
+.metric-content {
+  flex: 1;
+  min-width: 0;
+}
+
+.metric-value {
+  font-size: 28px;
+  font-weight: 800;
+  color: var(--color-neutral-800);
+  line-height: 1.2;
+  font-variant-numeric: tabular-nums;
+}
+
+.metric-label {
+  font-size: 13px;
+  color: var(--color-neutral-500);
+  font-weight: 500;
+  margin-top: 4px;
+}
+
+.metric-trend {
+  position: absolute;
+  top: 16px;
+  right: 16px;
+  
+  .trend-up {
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--color-success);
+    background: rgba(34, 197, 94, 0.1);
+    padding: 2px 8px;
+    border-radius: 100px;
+  }
+}
+
+/* 主网格布局 */
 .main-grid {
   display: grid;
-  grid-template-columns: 2fr 1fr;
+  grid-template-columns: 1.5fr 1fr;
   gap: 20px;
   margin-bottom: 24px;
 }
 
+.left-column,
+.right-column {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+/* 玻璃卡片 */
 .glass-card {
-  background: rgba(255, 255, 255, 0.7) !important;
+  background: rgba(255, 255, 255, 0.85) !important;
   backdrop-filter: blur(12px);
   border-radius: 16px !important;
-  border: 1px solid rgba(255, 255, 255, 0.5) !important;
-  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.03) !important;
+  border: 1px solid rgba(255, 255, 255, 0.6) !important;
+  box-shadow: var(--shadow-card) !important;
+  transition: all 0.3s ease;
+
+  &:hover {
+    box-shadow: var(--shadow-card-hover) !important;
+  }
 
   :deep(.el-card__header) {
-    border-bottom: 1px solid rgba(0,0,0,0.05);
+    border-bottom: 1px solid rgba(0, 0, 0, 0.04);
     padding: 16px 20px;
+  }
+
+  :deep(.el-card__body) {
+    padding: 20px;
   }
 }
 
-.c-header {
+.card-header {
   display: flex;
   align-items: center;
-  gap: 8px;
-  h4 { margin: 0; font-size: 15px; font-weight: 700; color: #1e293b; }
+  gap: 10px;
 }
 
-.dot-green { width: 8px; height: 8px; background: #10B981; border-radius: 50%; }
+.card-title {
+  margin: 0;
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--color-neutral-800);
+}
 
-/* Notice */
-.n-body { font-size: 14px; line-height: 1.8; color: #475569; padding: 4px 0; }
+.card-subtitle {
+  font-size: 12px;
+  color: var(--color-neutral-400);
+  margin-left: auto;
+}
 
-/* Weather */
-.w-body {
-  .w-main {
+.status-dot {
+  width: 8px;
+  height: 8px;
+  background: var(--color-primary-500);
+  border-radius: 50%;
+  animation: pulse 2s infinite;
+}
+
+@keyframes pulse {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50% { opacity: 0.6; transform: scale(0.9); }
+}
+
+/* 公告卡片 */
+.notice-content {
+  font-size: 14px;
+  line-height: 1.8;
+  color: var(--color-neutral-600);
+
+  .highlight {
+    color: var(--color-primary-500);
+    font-weight: 600;
+  }
+}
+
+/* 天气卡片 */
+.weather-icon {
+  font-size: 18px;
+  color: var(--color-secondary-500);
+}
+
+.weather-content {
+  .weather-main {
     display: flex;
     align-items: flex-end;
     gap: 16px;
     margin-bottom: 20px;
-    .temp { font-size: 42px; font-weight: 800; color: #10B981; line-height: 1; }
-    .w-status {
-      .txt { font-size: 16px; font-weight: 700; color: #1e293b; }
-      .day { font-size: 12px; color: #94a3b8; }
+  }
+
+  .temperature {
+    font-size: 48px;
+    font-weight: 800;
+    color: var(--color-primary-500);
+    line-height: 1;
+  }
+
+  .weather-status {
+    .weather-text {
+      font-size: 16px;
+      font-weight: 600;
+      color: var(--color-neutral-800);
+    }
+    .weather-date {
+      font-size: 12px;
+      color: var(--color-neutral-400);
+      margin-top: 2px;
     }
   }
-  .w-grid {
+
+  .weather-details {
     display: flex;
     gap: 24px;
-    margin-bottom: 16px;
-    padding: 12px;
-    background: rgba(16,185,129,0.05);
+    padding: 14px 16px;
+    background: rgba(16, 185, 129, 0.05);
     border-radius: 12px;
-    .wi { font-size: 13px; color: #475569; span { color: #94a3b8; margin-right: 4px; } }
+    margin-bottom: 16px;
   }
-  .w-notice { font-size: 12px; color: #64748b; background: #f8fafc; padding: 10px; border-radius: 8px; border: 1px solid rgba(0,0,0,0.02); }
+
+  .detail-item {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+  }
+
+  .detail-label {
+    font-size: 12px;
+    color: var(--color-neutral-400);
+  }
+
+  .detail-value {
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--color-neutral-700);
+  }
+
+  .weather-notice {
+    display: flex;
+    align-items: flex-start;
+    gap: 8px;
+    font-size: 13px;
+    color: var(--color-neutral-500);
+    background: var(--color-neutral-50);
+    padding: 12px;
+    border-radius: 10px;
+
+    i {
+      color: var(--color-primary-500);
+      margin-top: 2px;
+    }
+  }
 }
 
-/* App Entry */
-.app-grid {
+/* 快捷入口 */
+.actions-grid {
   display: grid;
   grid-template-columns: repeat(2, 1fr);
   gap: 12px;
-  .ai {
-    background: #f8fafc;
-    border: 1px solid #f1f5f9;
-    padding: 16px;
-    border-radius: 12px;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    cursor: pointer;
-    transition: all 0.2s ease;
-    
-    &:hover { background: #fff; border-color: #10B981; transform: translateY(-3px); box-shadow: 0 4px 10px rgba(16,185,129,0.1); }
-    
-    .ai-box {
-      width: 44px; height: 44px; border-radius: 10px; margin-bottom: 8px;
-      display: flex; align-items: center; justify-content: center;
-      i { font-size: 20px; color: #fff; }
-    }
-    span { font-size: 13px; font-weight: 600; color: #475569; }
+}
+
+.action-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 14px;
+  background: var(--color-neutral-50);
+  border: 1px solid var(--color-neutral-100);
+  border-radius: 12px;
+  cursor: pointer;
+  transition: all 0.25s ease;
+
+  &:hover {
+    background: white;
+    border-color: var(--color-primary-200);
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(16, 185, 129, 0.1);
   }
 }
 
-/* Links */
+.action-icon {
+  width: 44px;
+  height: 44px;
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+
+  i { font-size: 20px; color: white; }
+
+  &--primary { background: linear-gradient(135deg, #10B981, #059669); }
+  &--secondary { background: linear-gradient(135deg, #3B82F6, #2563EB); }
+  &--accent { background: linear-gradient(135deg, #F59E0B, #D97706); }
+  &--neutral { background: linear-gradient(135deg, #64748b, #475569); }
+}
+
+.action-info {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.action-name {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--color-neutral-800);
+}
+
+.action-desc {
+  font-size: 12px;
+  color: var(--color-neutral-400);
+}
+
+/* 链接列表 */
 .links-list {
   display: flex;
   flex-direction: column;
-  gap: 10px;
-  .l-item {
-    font-size: 13px; color: #64748b; text-decoration: none;
-    display: flex; justify-content: space-between; align-items: center;
-    padding: 8px 12px; border-radius: 8px; background: #f8fafc;
-    transition: color 0.2s;
-    &:hover { color: #10B981; background: rgba(16,185,129,0.05); }
-    i { font-size: 12px; opacity: 0.5; }
+  gap: 8px;
+}
+
+.link-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 14px;
+  background: var(--color-neutral-50);
+  border-radius: 10px;
+  text-decoration: none;
+  transition: all 0.2s ease;
+
+  &:hover {
+    background: rgba(16, 185, 129, 0.05);
+    
+    .link-name { color: var(--color-primary-500); }
+    .link-arrow { opacity: 1; transform: translateX(4px); }
   }
 }
 
-/* 4. Charts */
-.charts-row {
+.link-info {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+
+  i { font-size: 18px; color: var(--color-primary-400); }
+}
+
+.link-text {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.link-name {
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--color-neutral-700);
+  transition: color 0.2s;
+}
+
+.link-desc {
+  font-size: 11px;
+  color: var(--color-neutral-400);
+}
+
+.link-arrow {
+  font-size: 12px;
+  color: var(--color-neutral-400);
+  opacity: 0.5;
+  transition: all 0.2s;
+}
+
+/* 图表区域 */
+.charts-grid {
   display: grid;
   grid-template-columns: 1fr 2fr;
   gap: 20px;
   margin-bottom: 32px;
-  .chart-box { width: 100%; height: 320px; }
 }
 
-/* 5. Greenhouse */
+.chart-card {
+  .chart-container {
+    width: 100%;
+    height: 300px;
+  }
+}
+
+/* 温室监测区域 */
+.section-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 20px;
+}
+
+.section-indicator {
+  width: 4px;
+  height: 24px;
+  background: linear-gradient(180deg, var(--color-primary-500), var(--color-primary-400));
+  border-radius: 2px;
+}
+
 .section-title {
-  display: flex; align-items: center; gap: 12px; margin-bottom: 20px;
-  .v-line { width: 4px; height: 20px; background: #10B981; border-radius: 2px; }
-  h3 { margin: 0; font-size: 18px; font-weight: 800; color: #1e293b; letter-spacing: -0.01em; }
+  margin: 0;
+  font-size: 18px;
+  font-weight: 700;
+  color: var(--color-neutral-800);
+  letter-spacing: -0.01em;
 }
 
-.gh-grid {
+.greenhouse-grid {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
   gap: 16px;
 }
 
-.gh-card {
-  background: rgba(255, 255, 255, 0.7);
+.greenhouse-card {
+  background: rgba(255, 255, 255, 0.85);
   backdrop-filter: blur(12px);
   border-radius: 16px;
   padding: 20px;
-  border: 1px solid rgba(255, 255, 255, 0.5);
+  border: 1px solid rgba(255, 255, 255, 0.6);
   transition: all 0.3s ease;
-  &:hover { background: rgba(255, 255, 255, 0.9); transform: translateY(-4px); }
+  box-shadow: var(--shadow-card);
 
-  .gh-head {
-    display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;
-    .name { font-weight: 700; color: #1e293b; font-size: 15px; }
+  &:hover {
+    background: rgba(255, 255, 255, 0.95);
+    transform: translateY(-4px);
+    box-shadow: var(--shadow-card-hover);
   }
-  .gh-body {
-    .row {
-      font-size: 13px; color: #64748b; margin-bottom: 8px;
-      display: flex; justify-content: space-between;
-      span { color: #94a3b8; }
-      strong { color: #1e293b; }
-      &.err { color: #ef4444; font-weight: 700; }
-    }
+
+  &--alert {
+    border-color: rgba(239, 68, 68, 0.2);
+    background: rgba(254, 242, 242, 0.5);
   }
 }
 
+.gh-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 16px;
+}
+
+.gh-name {
+  font-weight: 700;
+  color: var(--color-neutral-800);
+  font-size: 15px;
+}
+
+.gh-status {
+  font-size: 11px;
+}
+
+.gh-body {
+  .gh-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-size: 13px;
+    color: var(--color-neutral-500);
+    margin-bottom: 10px;
+
+    &:last-child { margin-bottom: 0; }
+
+    &--error {
+      color: var(--color-error);
+      font-weight: 600;
+    }
+  }
+
+  .gh-label {
+    color: var(--color-neutral-400);
+  }
+
+  .gh-value {
+    color: var(--color-neutral-700);
+    font-weight: 600;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+}
+
+.trend-badge {
+  font-size: 10px;
+  padding: 2px 6px;
+  border-radius: 100px;
+  
+  &--danger {
+    background: rgba(239, 68, 68, 0.1);
+    color: var(--color-error);
+  }
+}
+
+/* 响应式 */
 @media (max-width: 1400px) {
-  .gh-grid { grid-template-columns: repeat(2, 1fr); }
+  .greenhouse-grid { grid-template-columns: repeat(2, 1fr); }
+}
+
+@media (max-width: 1200px) {
+  .main-grid { grid-template-columns: 1fr; }
+  .charts-grid { grid-template-columns: 1fr; }
 }
 
 @media (max-width: 1024px) {
-  .metrics-row { grid-template-columns: repeat(2, 1fr); }
-  .main-grid { grid-template-columns: 1fr; }
-  .charts-row { grid-template-columns: 1fr; }
-  .gh-grid { grid-template-columns: 1fr; }
+  .metrics-grid { grid-template-columns: repeat(2, 1fr); }
+  .greenhouse-grid { grid-template-columns: 1fr; }
+}
+
+@media (max-width: 640px) {
+  .dashboard { padding: 16px; }
+  .metrics-grid { grid-template-columns: 1fr; }
+  .actions-grid { grid-template-columns: 1fr; }
 }
 </style>

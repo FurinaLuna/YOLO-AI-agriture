@@ -14,53 +14,138 @@ const alias: Record<string, string> = {
 
 const viteConfig = defineConfig((mode: ConfigEnv) => {
 	const env = loadEnv(mode.mode, process.cwd());
+	const isProduction = mode.command === 'build';
+	
 	return {
 		plugins: [vue(), vueSetupExtend()],
 		root: process.cwd(),
 		resolve: { alias },
 		base: mode.command === 'serve' ? './' : env.VITE_PUBLIC_PATH,
+		
 		optimizeDeps: {
-			include: ['element-plus/lib/locale/lang/zh-cn', 'element-plus/lib/locale/lang/en', 'element-plus/lib/locale/lang/zh-tw'],
+			include: [
+				'element-plus/lib/locale/lang/zh-cn',
+				'element-plus/lib/locale/lang/en',
+				'element-plus/lib/locale/lang/zh-tw',
+				'vue',
+				'vue-router',
+				'pinia',
+			],
+			exclude: ['@iconify/json'],
 		},
+		
 		server: {
 			host: '0.0.0.0',
 			port: env.VITE_PORT as unknown as number,
 			open: env.VITE_OPEN,
 			hmr: true,
+			cors: true,
 			proxy: {
 				'/api': {
-					//设置拦截器  拦截器格式   斜杠+拦截器名字，名字可以自己定
-					target: 'http://localhost:9999/', //代理的目标地址
+					target: 'http://localhost:9999/',
 					ws: true,
 					changeOrigin: true,
 					rewrite: (path) => path.replace(/^\/api/, ''),
 				},
 				'/flask': {
-					//设置拦截器  拦截器格式   斜杠+拦截器名字，名字可以自己定
-					target: 'http://localhost:5000/', //代理的目标地址
+					target: 'http://localhost:5000/',
 					ws: true,
 					changeOrigin: true,
 					rewrite: (path) => path.replace(/^\/flask/, ''),
 				},
 			},
 		},
+		
 		build: {
 			outDir: 'dist',
-			chunkSizeWarningLimit: 1500,
+			chunkSizeWarningLimit: 1000,
+			minify: 'terser',
+			terserOptions: {
+				compress: {
+					drop_console: isProduction,
+					drop_debugger: isProduction,
+					pure_funcs: isProduction ? ['console.log'] : [],
+				},
+				format: {
+					comments: false,
+				},
+			},
 			rollupOptions: {
 				output: {
 					entryFileNames: `assets/[name].[hash].js`,
 					chunkFileNames: `assets/[name].[hash].js`,
 					assetFileNames: `assets/[name].[hash].[ext]`,
 					compact: true,
-					manualChunks: {
-						vue: ['vue', 'vue-router', 'pinia'],
-						echarts: ['echarts'],
+					manualChunks: (id) => {
+						if (id.includes('node_modules')) {
+							if (id.includes('vue') && !id.includes('vue-router') && !id.includes('pinia')) {
+								return 'vue-vendor';
+							}
+							if (id.includes('vue-router')) {
+								return 'vue-router';
+							}
+							if (id.includes('pinia')) {
+								return 'pinia';
+							}
+							if (id.includes('element-plus')) {
+								return 'element-plus';
+							}
+							if (id.includes('echarts') || id.includes('zrender')) {
+								return 'echarts';
+							}
+							if (id.includes('axios')) {
+								return 'axios';
+							}
+							if (id.includes('markdown-it')) {
+								return 'markdown';
+							}
+							if (id.includes('@element-plus/icons-vue')) {
+								return 'element-icons';
+							}
+							if (id.includes('lodash') || id.includes('lodash-es')) {
+								return 'lodash';
+							}
+							return 'vendor';
+						}
+						
+						if (id.includes('/src/views/')) {
+							const match = id.match(/\/src\/views\/(.*)\.vue/);
+							if (match) {
+								const viewName = match[1].split('/')[0];
+								return `views-${viewName}`;
+							}
+						}
+						
+						if (id.includes('/src/components/')) {
+							return 'components';
+						}
+						
+						if (id.includes('/src/stores/')) {
+							return 'stores';
+						}
+						
+						if (id.includes('/src/utils/')) {
+							return 'utils';
+						}
 					},
 				},
 			},
+			reportCompressedSize: true,
+			sourcemap: !isProduction,
+			target: 'es2015',
+			cssCodeSplit: true,
 		},
-		css: { preprocessorOptions: { css: { charset: false } } },
+		
+		css: {
+			preprocessorOptions: {
+				scss: {
+					charset: false,
+				},
+				css: { charset: false },
+			},
+			devSourcemap: true,
+		},
+		
 		define: {
 			__VUE_I18N_LEGACY_API__: JSON.stringify(false),
 			__VUE_I18N_FULL_INSTALL__: JSON.stringify(false),

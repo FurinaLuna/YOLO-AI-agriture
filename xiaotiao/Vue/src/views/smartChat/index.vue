@@ -1,131 +1,143 @@
 <template>
   <div class="chat-container">
-    <!-- 顶部 Header：智谱 GLM 品牌区 -->
     <div class="chat-header">
-      <div class="flex items-center gap-3">
-        <!-- GLM 品牌图标 -->
-        <div class="glm-icon-wrap">
-          <i class="iconfontjs icon-znwd text-white" style="font-size: 20px;"></i>
-        </div>
-        <div>
-          <h3 class="chat-title">智谱 GLM 智能助研</h3>
-          <p class="chat-subtitle">基于 GLM-4 · 农业科研专项智能体</p>
+      <div class="header-left">
+        <div class="glm-brand">
+          <div class="glm-icon">
+            <i class="iconfontjs icon-znwd"></i>
+          </div>
+          <div class="brand-info">
+            <h1 class="brand-title">智谱 GLM 智能助研</h1>
+            <p class="brand-subtitle">基于 GLM-4 · 农业科研专项智能体</p>
+          </div>
         </div>
       </div>
-      <!-- 状态标签 -->
-      <div class="status-badge">
-        <span class="status-dot"></span>
-        专家在线
+      
+      <div class="header-right">
+        <div class="status-indicator">
+          <span class="status-dot"></span>
+          <span class="status-text">专家在线</span>
+        </div>
+        <button class="clear-btn" @click="clearChat" title="清空对话">
+          <i class="iconfontjs icon-shanchu"></i>
+        </button>
       </div>
     </div>
 
-    <!-- 消息区 -->
     <div class="chat-messages" ref="messageContainer">
       <div
         v-for="(message, index) in aiStore.smartChat.messages"
         :key="index"
-        :class="['message', message.role === 'user' ? 'user-message' : 'assistant-message']"
+        :class="['message-wrapper', message.role]"
       >
-        <div class="message-content">
-          <!-- 头像 -->
-          <div :class="['avatar', message.role === 'user' ? 'user-avatar' : 'glm-avatar']">
-            <i v-if="message.role === 'user'" class="iconfontjs icon-yh" style="font-size: 16px;"></i>
-            <i v-else class="iconfontjs icon-znwd" style="font-size: 18px;"></i>
+        <div class="message-avatar" :class="message.role">
+          <i v-if="message.role === 'user'" class="iconfontjs icon-yh"></i>
+          <i v-else class="iconfontjs icon-znwd"></i>
+        </div>
+        
+        <div class="message-bubble" :class="message.role">
+          <div v-if="message.role === 'assistant'" class="message-sender">
+            <span class="sender-name">智谱 GLM</span>
+            <span class="sender-badge">农事专家</span>
           </div>
-          <!-- 消息气泡 -->
-          <div class="bubble-wrapper">
-            <!-- AI 消息来源标签 -->
-            <span v-if="message.role === 'assistant'" class="message-label">智谱 GLM · 农事专家</span>
-            <!-- 内容区 -->
-            <div v-if="message.role === 'user'" class="text user-text">{{ message.content }}</div>
-            <div v-else class="text assistant-text markdown-body" v-html="renderMarkdown(message.content)"></div>
+          <div v-if="message.role === 'user'" class="message-text user-text">
+            {{ message.content }}
+          </div>
+          <div v-else class="message-text assistant-text">
+            <div class="markdown-content" v-html="renderMarkdown(message.content)"></div>
           </div>
         </div>
       </div>
 
-      <!-- 打字中动效 -->
-      <div v-if="aiStore.smartChat.loading" class="message assistant-message">
-        <div class="message-content">
-          <div class="avatar glm-avatar">
-            <i class="iconfontjs icon-znwd" style="font-size: 18px;"></i>
+      <div v-if="aiStore.smartChat.loading" class="message-wrapper assistant">
+        <div class="message-avatar assistant">
+          <i class="iconfontjs icon-znwd"></i>
+        </div>
+        <div class="message-bubble assistant">
+          <div class="message-sender">
+            <span class="sender-name">智谱 GLM</span>
           </div>
-          <div class="bubble-wrapper">
-            <span class="message-label">智谱 GLM</span>
-            <div class="text assistant-text">
-              <div class="typing-indicator">
-                <span></span><span></span><span></span>
-              </div>
+          <div class="message-text assistant-text">
+            <div class="typing-indicator">
+              <span></span>
+              <span></span>
+              <span></span>
             </div>
           </div>
         </div>
       </div>
     </div>
 
-    <!-- 推荐问题快捷入口 -->
-    <div class="suggested-questions" v-if="aiStore.smartChat.messages.length === 1 && !aiStore.smartChat.loading">
-      <div class="suggested-title">
-        <i class="iconfontjs icon-bingchonghai-1haichong" style="font-size: 14px; color: #10B981; margin-right:4px;"></i>
-        猜你想问
+    <div 
+      class="suggestions-section" 
+      v-if="aiStore.smartChat.messages.length === 1 && !aiStore.smartChat.loading"
+    >
+      <div class="suggestions-header">
+        <i class="iconfontjs icon-bingchonghai-1haichong"></i>
+        <span>猜你想问</span>
       </div>
-      <div class="suggested-list">
-        <div
+      <div class="suggestions-grid">
+        <button
           v-for="(question, index) in suggestedQuestions"
           :key="index"
-          class="suggested-item"
+          class="suggestion-chip"
           @click="selectQuestion(question)"
         >
           {{ question }}
-        </div>
+        </button>
       </div>
     </div>
 
-    <!-- 输入区 -->
     <div class="chat-input-area">
-      <el-input
-        v-model="userInput"
-        type="textarea"
-        :rows="3"
-        placeholder="向智谱 GLM 提问农业相关问题... (Ctrl+Enter 发送)"
-        @keyup.ctrl.enter="sendMessage"
-        class="chat-textarea"
-      />
-      <div class="input-actions" style="margin-top: 5px;">
-        <span class="input-hint">{{ userInput.length }} 字</span>
-        <el-button
-          type="primary"
-          :loading="aiStore.smartChat.loading"
-          @click="sendMessage"
-          :disabled="!userInput.trim()"
-          class="send-btn"
-        >
-          <i class="iconfontjs icon-fasong" style="font-size: 14px; margin-right: 4px;"></i>
-          发送
-        </el-button>
+      <div class="input-wrapper">
+        <textarea
+          v-model="userInput"
+          :placeholder="inputPlaceholder"
+          :rows="3"
+          class="chat-textarea"
+          @keydown="handleKeydown"
+        ></textarea>
+        <div class="input-info">
+          <span class="char-count">{{ userInput.length }} / 2000</span>
+          <span class="shortcut-hint">Ctrl + Enter 发送</span>
+        </div>
       </div>
+      
+      <button
+        class="send-button"
+        :class="{ 'send-button--active': userInput.trim() }"
+        :disabled="!userInput.trim() || aiStore.smartChat.loading"
+        @click="sendMessage"
+      >
+        <i class="iconfontjs icon-fasong"></i>
+        <span>发送</span>
+      </button>
     </div>
   </div>
 </template>
 
 <script setup lang="ts" name="SmartChat">
-import { ref, onMounted, nextTick } from 'vue';
-import axios from 'axios';
-import MarkdownIt from 'markdown-it';
-import { ElMessage } from 'element-plus';
-import { useAIStore } from '/@/stores/aiStore';
+import { ref, onMounted, nextTick, watch } from 'vue'
+import axios from 'axios'
+import MarkdownIt from 'markdown-it'
+import { ElMessage } from 'element-plus'
+import { useAIStore } from '/@/stores/aiStore'
 
-const aiStore = useAIStore();
-const messageContainer = ref<HTMLDivElement | null>(null);
-const userInput = ref('');
-const apiKey = '334ca8db8ede46d9bc1f73d58aa968fc.r9gdj8k3GW8u9CR4';
+const aiStore = useAIStore()
+const messageContainer = ref<HTMLDivElement | null>(null)
+const userInput = ref('')
+const apiKey = '334ca8db8ede46d9bc1f73d58aa968fc.r9gdj8k3GW8u9CR4'
 
 const md = new MarkdownIt({
   breaks: true,
   linkify: true,
   typographer: true,
   html: false,
-});
+})
 
-const renderMarkdown = (text: string) => md.render(text || '');
+const renderMarkdown = (text: string) => md.render(text || '')
+
+const inputPlaceholder = '向智谱 GLM 提问农业相关问题...'
 
 const suggestedQuestions = [
   '如何防治水稻纹枯病？',
@@ -134,29 +146,33 @@ const suggestedQuestions = [
   '如何科学施用农药减少残留？',
   '作物缺铁症状如何诊断？',
   '如何提高农作物的抗旱能力？',
-];
+  '温室大棚如何进行温湿度管理？',
+]
 
 const scrollToBottom = () => {
   if (messageContainer.value) {
-    messageContainer.value.scrollTop = messageContainer.value.scrollHeight;
+    messageContainer.value.scrollTo({
+      top: messageContainer.value.scrollHeight,
+      behavior: 'smooth',
+    })
   }
-};
+}
 
 const selectQuestion = (question: string) => {
-  if (aiStore.smartChat.loading) return;
-  userInput.value = question;
-  sendMessage();
-};
+  if (aiStore.smartChat.loading) return
+  userInput.value = question
+  sendMessage()
+}
 
 const sendMessage = async () => {
-  if (!userInput.value.trim() || aiStore.smartChat.loading) return;
+  if (!userInput.value.trim() || aiStore.smartChat.loading) return
 
-  const userMessage = userInput.value.trim();
-  aiStore.smartChat.messages.push({ role: 'user', content: userMessage });
-  userInput.value = '';
-  aiStore.smartChat.loading = true;
+  const userMessage = userInput.value.trim()
+  aiStore.smartChat.messages.push({ role: 'user', content: userMessage })
+  userInput.value = ''
+  aiStore.smartChat.loading = true
 
-  nextTick(() => scrollToBottom());
+  nextTick(() => scrollToBottom())
 
   try {
     const response = await axios.post(
@@ -175,23 +191,40 @@ const sendMessage = async () => {
           'Content-Type': 'application/json'
         }
       }
-    );
+    )
     aiStore.smartChat.messages.push({
       role: 'assistant',
       content: response.data.choices[0].message.content
-    });
+    })
   } catch (error) {
-    ElMessage.error('发送失败，请检查网络');
-    console.error('[GLM API Error]:', error);
+    ElMessage.error('发送失败，请检查网络')
+    console.error('[GLM API Error]:', error)
   } finally {
-    aiStore.smartChat.loading = false;
-    nextTick(() => scrollToBottom());
+    aiStore.smartChat.loading = false
+    nextTick(() => scrollToBottom())
   }
-};
+}
+
+const clearChat = () => {
+  aiStore.smartChat.messages = [{ role: 'assistant', content: '您好！我是智谱 GLM 农业智能助手，我可以帮您解答关于农作物病虫害、种植管理、农业技术等方面的问题。请问有什么可以帮助您的？' }]
+  userInput.value = ''
+  ElMessage.success('对话已清空')
+}
+
+const handleKeydown = (e: KeyboardEvent) => {
+  if (e.ctrlKey && e.key === 'Enter') {
+    e.preventDefault()
+    sendMessage()
+  }
+}
+
+watch(() => aiStore.smartChat.messages.length, () => {
+  nextTick(() => scrollToBottom())
+})
 
 onMounted(() => {
-  scrollToBottom();
-});
+  scrollToBottom()
+})
 </script>
 
 <style scoped lang="scss">
@@ -199,118 +232,557 @@ onMounted(() => {
   height: calc(100vh - 60px);
   display: flex;
   flex-direction: column;
-  background: #f8fafc;
-  font-family: system-ui, -apple-system, 'PingFang SC', sans-serif;
+  background: linear-gradient(180deg, #f8fafc 0%, #f1f5f9 100%);
+  font-family: var(--font-sans);
 }
 
+/* Header */
 .chat-header {
-  padding: 14px 24px;
-  background: rgba(255, 255, 255, 0.85);
+  padding: 16px 24px;
+  background: rgba(255, 255, 255, 0.9);
   backdrop-filter: blur(16px);
-  box-shadow: 0 1px 0 rgba(0, 0, 0, 0.06);
+  border-bottom: 1px solid rgba(0, 0, 0, 0.06);
   display: flex;
   align-items: center;
   justify-content: space-between;
-  border-bottom: 1px solid rgba(0, 0, 0, 0.04);
+  flex-shrink: 0;
 }
 
-.glm-icon-wrap {
-  width: 42px;
-  height: 42px;
+.header-left {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+.glm-brand {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.glm-icon {
+  width: 44px;
+  height: 44px;
   border-radius: 12px;
   background: linear-gradient(135deg, #10B981 0%, #3B82F6 100%);
   display: flex;
   align-items: center;
   justify-content: center;
   box-shadow: 0 4px 12px rgba(16, 185, 129, 0.3);
+
+  i {
+    font-size: 20px;
+    color: white;
+  }
 }
 
-.chat-title { margin: 0; font-size: 1rem; font-weight: 700; color: #1e293b; }
-.chat-subtitle { margin: 2px 0 0 0; font-size: 0.75rem; color: #94a3b8; }
+.brand-info {
+  .brand-title {
+    margin: 0;
+    font-size: 1rem;
+    font-weight: 700;
+    color: var(--color-neutral-800);
+  }
 
-.status-badge {
-  display: flex; align-items: center; gap: 6px; padding: 4px 12px;
-  background: rgba(16, 185, 129, 0.08); border: 1px solid rgba(16, 185, 129, 0.15);
-  border-radius: 100px; font-size: 0.75rem; font-weight: 500; color: #10B981;
+  .brand-subtitle {
+    margin: 4px 0 0;
+    font-size: 0.75rem;
+    color: var(--color-neutral-400);
+  }
+}
+
+.header-right {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.status-indicator {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 14px;
+  background: rgba(16, 185, 129, 0.08);
+  border: 1px solid rgba(16, 185, 129, 0.15);
+  border-radius: 100px;
+  font-size: 0.75rem;
+  font-weight: 500;
+  color: var(--color-primary-500);
 }
 
 .status-dot {
-  width: 6px; height: 6px; background: #10B981; border-radius: 50%;
-  animation: pulse-dot 2s infinite;
+  width: 6px;
+  height: 6px;
+  background: var(--color-primary-500);
+  border-radius: 50%;
+  animation: pulse 2s infinite;
 }
 
-@keyframes pulse-dot {
+@keyframes pulse {
   0%, 100% { opacity: 1; transform: scale(1); }
   50% { opacity: 0.6; transform: scale(0.8); }
 }
 
+.clear-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  border: none;
+  background: var(--color-neutral-100);
+  border-radius: 10px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+
+  i {
+    font-size: 16px;
+    color: var(--color-neutral-500);
+  }
+
+  &:hover {
+    background: var(--color-error-light);
+    
+    i {
+      color: var(--color-error);
+    }
+  }
+}
+
+/* Messages */
 .chat-messages {
-  flex: 1; overflow-y: auto; padding: 24px; scroll-behavior: smooth;
-  &::-webkit-scrollbar { width: 5px; }
-  &::-webkit-scrollbar-thumb { background: rgba(0, 0, 0, 0.12); border-radius: 8px; }
+  flex: 1;
+  overflow-y: auto;
+  padding: 24px;
+  scroll-behavior: smooth;
+
+  &::-webkit-scrollbar {
+    width: 6px;
+  }
+
+  &::-webkit-scrollbar-track {
+    background: transparent;
+  }
+
+  &::-webkit-scrollbar-thumb {
+    background: rgba(0, 0, 0, 0.12);
+    border-radius: 3px;
+
+    &:hover {
+      background: rgba(0, 0, 0, 0.2);
+    }
+  }
 }
 
-.message {
-  margin-bottom: 20px; display: flex; opacity: 0; transform: translateY(12px);
-  animation: messageAppear 0.3s ease forwards;
+.message-wrapper {
+  margin-bottom: 20px;
+  display: flex;
+  gap: 12px;
+  animation: messageSlide 0.3s ease-out;
+
+  &.user {
+    flex-direction: row-reverse;
+  }
+
+  &.assistant {
+    animation: messageSlide 0.3s ease-out 0.1s both;
+  }
 }
 
-@keyframes messageAppear { to { opacity: 1; transform: translateY(0); } }
-
-.message-content { display: flex; align-items: flex-start; max-width: 85%; gap: 10px; }
-.user-message { justify-content: flex-end; .message-content { flex-direction: row-reverse; } }
-
-.avatar {
-  width: 36px; height: 36px; border-radius: 10px; display: flex; align-items: center; justify-content: center; flex-shrink: 0;
-  &.user-avatar { background: linear-gradient(135deg, #10B981, #059669); color: white; box-shadow: 0 2px 8px rgba(16, 185, 129, 0.2); }
-  &.glm-avatar { background: linear-gradient(135deg, #3B82F6, #6366F1); color: white; box-shadow: 0 2px 8px rgba(59, 130, 246, 0.2); }
+@keyframes messageSlide {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
-.bubble-wrapper { display: flex; flex-direction: column; gap: 4px; min-width: 0; flex: 1; }
-.message-label { font-size: 0.7rem; color: #94a3b8; font-weight: 500; padding-left: 4px; }
+.message-avatar {
+  width: 38px;
+  height: 38px;
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
 
-.text {
-  padding: 12px 16px; border-radius: 4px 12px 12px 12px; line-height: 1.7; font-size: 14px; word-break: break-word;
-  &.user-text { background: #10B981; color: #fff; border-radius: 12px 4px 12px 12px; }
-  &.assistant-text { background: #ffffff; color: #334155; border: 1px solid rgba(0, 0, 0, 0.05); box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04); }
+  &.user {
+    background: linear-gradient(135deg, #10B981, #059669);
+    box-shadow: 0 2px 8px rgba(16, 185, 129, 0.25);
+
+    i {
+      font-size: 16px;
+      color: white;
+    }
+  }
+
+  &.assistant {
+    background: linear-gradient(135deg, #3B82F6, #6366F1);
+    box-shadow: 0 2px 8px rgba(59, 130, 246, 0.25);
+
+    i {
+      font-size: 18px;
+      color: white;
+    }
+  }
 }
 
+.message-bubble {
+  max-width: 75%;
+  min-width: 100px;
+
+  &.user {
+    background: linear-gradient(135deg, #10B981, #059669);
+    border-radius: 16px 4px 16px 16px;
+    box-shadow: 0 2px 12px rgba(16, 185, 129, 0.2);
+  }
+
+  &.assistant {
+    background: white;
+    border-radius: 4px 16px 16px 16px;
+    border: 1px solid rgba(0, 0, 0, 0.05);
+    box-shadow: 0 2px 12px rgba(0, 0, 0, 0.04);
+  }
+}
+
+.message-sender {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+
+.sender-name {
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--color-neutral-700);
+}
+
+.sender-badge {
+  font-size: 0.65rem;
+  padding: 2px 8px;
+  background: linear-gradient(135deg, rgba(16, 185, 129, 0.1), rgba(59, 130, 246, 0.1));
+  color: var(--color-primary-500);
+  border-radius: 100px;
+  font-weight: 500;
+}
+
+.message-text {
+  padding: 14px 18px;
+  line-height: 1.7;
+  font-size: 14px;
+  word-break: break-word;
+
+  &.user-text {
+    color: white;
+  }
+
+  &.assistant-text {
+    color: var(--color-neutral-700);
+  }
+}
+
+.markdown-content {
+  font-family: var(--font-sans);
+  color: var(--color-neutral-700);
+
+  :deep(p) {
+    margin-bottom: 12px;
+    line-height: 1.7;
+  }
+
+  :deep(p:last-child) {
+    margin-bottom: 0;
+  }
+
+  :deep(h3) {
+    color: var(--color-primary-500);
+    font-size: 15px;
+    font-weight: 700;
+    margin: 16px 0 10px;
+    display: flex;
+    align-items: center;
+
+    &::before {
+      content: '';
+      width: 3px;
+      height: 14px;
+      background: var(--color-primary-500);
+      margin-right: 10px;
+      border-radius: 4px;
+    }
+  }
+
+  :deep(strong) {
+    color: var(--color-neutral-900);
+    font-weight: 600;
+    background: rgba(16, 185, 129, 0.05);
+    padding: 0 4px;
+    border-radius: 4px;
+  }
+
+  :deep(ul), :deep(ol) {
+    padding-left: 20px;
+    margin-bottom: 12px;
+  }
+
+  :deep(li) {
+    margin-bottom: 6px;
+    line-height: 1.6;
+  }
+
+  :deep(ul > li::marker) {
+    color: var(--color-primary-500);
+  }
+
+  :deep(blockquote) {
+    border-left: 3px solid var(--color-primary-500);
+    background: rgba(16, 185, 129, 0.03);
+    padding: 12px 16px;
+    margin: 12px 0;
+    border-radius: 0 8px 8px 0;
+    color: var(--color-neutral-600);
+  }
+
+  :deep(code) {
+    background: rgba(16, 185, 129, 0.1);
+    color: var(--color-primary-600);
+    padding: 2px 6px;
+    border-radius: 4px;
+    font-size: 0.85em;
+    font-family: var(--font-mono);
+  }
+
+  :deep(table) {
+    width: 100%;
+    border-collapse: collapse;
+    margin: 12px 0;
+    font-size: 0.85em;
+  }
+
+  :deep(th) {
+    background: linear-gradient(135deg, #10B981, #059669);
+    color: white;
+    padding: 10px 14px;
+    text-align: left;
+    font-weight: 600;
+  }
+
+  :deep(td) {
+    padding: 10px 14px;
+    border-bottom: 1px solid rgba(0, 0, 0, 0.05);
+    color: var(--color-neutral-600);
+  }
+
+  :deep(tr:nth-child(even) td) {
+    background: rgba(248, 250, 252, 0.8);
+  }
+}
+
+/* Typing Indicator */
 .typing-indicator {
-  display: flex; align-items: center; gap: 5px; padding: 4px 0;
-  span { width: 7px; height: 7px; background: #3B82F6; border-radius: 50%; animation: typingBounce 1.4s infinite ease-in-out both; }
-  span:nth-child(1) { animation-delay: -0.32s; }
-  span:nth-child(2) { animation-delay: -0.16s; }
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  padding: 4px 0;
+
+  span {
+    width: 8px;
+    height: 8px;
+    background: var(--color-secondary-500);
+    border-radius: 50%;
+    animation: typingBounce 1.4s infinite ease-in-out both;
+
+    &:nth-child(1) {
+      animation-delay: -0.32s;
+    }
+
+    &:nth-child(2) {
+      animation-delay: -0.16s;
+    }
+  }
 }
 
 @keyframes typingBounce {
-  0%, 80%, 100% { transform: scale(0.5); opacity: 0.4; }
-  40% { transform: scale(1); opacity: 1; }
-}
-
-/* 顶级 Markdown 渲染样式 */
-.markdown-body {
-  font-family: inherit; color: #334155;
-  :deep(p) { margin-bottom: 10px; }
-  :deep(h3) { 
-    color: #10B981; font-size: 15px; margin: 15px 0 8px; font-weight: 700;
-    display: flex; align-items: center;
-    &::before { content: ''; width: 3px; height: 14px; background: #10B981; margin-right: 8px; border-radius: 4px; }
+  0%, 80%, 100% {
+    transform: scale(0.6);
+    opacity: 0.4;
   }
-  :deep(strong) { color: #0f172a; font-weight: 700; background: rgba(16, 185, 129, 0.05); padding: 0 2px; }
-  :deep(ul) { padding-left: 18px; li { margin-bottom: 4px; &::marker { color: #10B981; } } }
-  :deep(blockquote) { border-left: 3px solid #10B981; background: rgba(16, 185, 129, 0.03); padding: 8px 12px; margin: 12px 0; border-radius: 0 8px 8px 0; }
+  40% {
+    transform: scale(1);
+    opacity: 1;
+  }
 }
 
-.suggested-questions { padding: 14px 24px; background: #fff; border-top: 1px solid rgba(0, 0, 0, 0.05); }
-.suggested-title { font-size: 0.75rem; color: #94a3b8; margin-bottom: 8px; font-weight: 600; }
-.suggested-list { display: flex; flex-wrap: wrap; gap: 8px; }
-.suggested-item {
-  padding: 5px 12px; background: rgba(16, 185, 129, 0.05); border: 1px solid rgba(16, 185, 129, 0.15);
-  border-radius: 100px; font-size: 0.8rem; color: #10B981; cursor: pointer; transition: all 0.2s;
-  &:hover { background: rgba(16, 185, 129, 0.1); transform: translateY(-1px); }
+/* Suggestions */
+.suggestions-section {
+  padding: 16px 24px;
+  background: white;
+  border-top: 1px solid rgba(0, 0, 0, 0.05);
 }
 
-.chat-input-area { padding: 16px 24px; background: #fff; border-top: 1px solid rgba(0, 0, 0, 0.05); }
-.chat-textarea :deep(.el-textarea__inner) { border-radius: 12px; background: #f8fafc; border: 1px solid #e2e8f0; &:focus { border-color: #10B981; box-shadow: 0 0 0 2px rgba(16, 185, 129, 0.1); } }
-.send-btn { background: #10B981 !important; border: none !important; box-shadow: 0 4px 10px rgba(16, 185, 129, 0.2) !important; &:hover { transform: translateY(-1px); } }
+.suggestions-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 12px;
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--color-neutral-400);
+
+  i {
+    font-size: 14px;
+    color: var(--color-primary-500);
+  }
+}
+
+.suggestions-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.suggestion-chip {
+  padding: 8px 16px;
+  background: rgba(16, 185, 129, 0.05);
+  border: 1px solid rgba(16, 185, 129, 0.15);
+  border-radius: 100px;
+  font-size: 0.85rem;
+  color: var(--color-primary-500);
+  cursor: pointer;
+  transition: all 0.2s ease;
+
+  &:hover {
+    background: rgba(16, 185, 129, 0.1);
+    transform: translateY(-1px);
+  }
+
+  &:active {
+    transform: translateY(0);
+  }
+}
+
+/* Input Area */
+.chat-input-area {
+  padding: 16px 24px;
+  background: white;
+  border-top: 1px solid rgba(0, 0, 0, 0.05);
+}
+
+.input-wrapper {
+  position: relative;
+}
+
+.chat-textarea {
+  width: 100%;
+  padding: 14px 16px;
+  padding-right: 120px;
+  border: 1px solid var(--color-neutral-200);
+  border-radius: 12px;
+  background: var(--color-neutral-50);
+  font-size: 14px;
+  line-height: 1.6;
+  color: var(--color-neutral-800);
+  resize: none;
+  font-family: var(--font-sans);
+  transition: all 0.2s ease;
+
+  &::placeholder {
+    color: var(--color-neutral-400);
+  }
+
+  &:focus {
+    outline: none;
+    border-color: var(--color-primary-500);
+    background: white;
+    box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.1);
+  }
+}
+
+.input-info {
+  position: absolute;
+  right: 16px;
+  bottom: 14px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  font-size: 0.75rem;
+  color: var(--color-neutral-400);
+}
+
+.char-count {
+  opacity: 0.7;
+}
+
+.shortcut-hint {
+  opacity: 0.5;
+}
+
+.send-button {
+  position: absolute;
+  right: 16px;
+  bottom: 50px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 10px 20px;
+  background: var(--color-neutral-200);
+  border: none;
+  border-radius: 10px;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--color-neutral-400);
+  cursor: not-allowed;
+  transition: all 0.25s ease;
+
+  &--active {
+    background: linear-gradient(135deg, #10B981, #059669);
+    color: white;
+    cursor: pointer;
+    box-shadow: 0 4px 12px rgba(16, 185, 129, 0.3);
+
+    &:hover {
+      transform: translateY(-1px);
+      box-shadow: 0 6px 16px rgba(16, 185, 129, 0.4);
+    }
+
+    &:active {
+      transform: translateY(0);
+    }
+  }
+
+  i {
+    font-size: 14px;
+  }
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+  .chat-container {
+    height: calc(100vh - 50px);
+  }
+
+  .chat-header {
+    padding: 12px 16px;
+  }
+
+  .brand-title {
+    font-size: 0.9rem;
+  }
+
+  .chat-messages {
+    padding: 16px;
+  }
+
+  .chat-input-area {
+    padding: 12px 16px;
+  }
+
+  .suggestions-section {
+    padding: 12px 16px;
+  }
+}
 </style>

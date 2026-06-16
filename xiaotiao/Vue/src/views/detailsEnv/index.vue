@@ -115,7 +115,7 @@ const allEnvData = computed(() => [...firstRow.value, ...secondRow.value]);
 
 const suggestions = ref('');
 const loading = ref(false);
-const apiKey = '334ca8db8ede46d9bc1f73d58aa968fc.r9gdj8k3GW8u9CR4';
+const apiKey = import.meta.env.VITE_GLM_API_KEY || '';
 
 async function getSuggestions() {
   aiStore.detailsEnv.loading = true;

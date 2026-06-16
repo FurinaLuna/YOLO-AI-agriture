@@ -57,9 +57,7 @@ Flask AI 服务
 ```text
 .
 ├─ README.md
-├─ NOTICE.md
-├─ THIRD_PARTY_NOTICES.md
-├─ IP_Materials/               # 软著、专利、说明书等交付材料
+├─ .gitignore
 └─ xiaotiao/
    ├─ Vue/                     # 前端项目
    │  ├─ src/
@@ -72,6 +70,7 @@ Flask AI 服务
    │  │  ├─ utils/
    │  │  └─ views/
    │  ├─ public/
+   │  ├─ .env.example          # 环境变量模板
    │  ├─ package.json
    │  └─ vite.config.ts
    ├─ SpringBoot/              # Java 后端
@@ -133,9 +132,9 @@ Flask AI 服务
 
 ### 1. 初始化数据库
 
-将 [xiaotiao/cropdisease.sql](/c:/Users/zhangchaowang/Desktop/Compation/xiaotiao/cropdisease.sql) 导入本地 MySQL，默认数据库名为 `cropdisease`。
+将 `xiaotiao/cropdisease.sql` 导入本地 MySQL，默认数据库名为 `cropdisease`。
 
-Spring Boot 默认数据库配置位于 [application.properties](/c:/Users/zhangchaowang/Desktop/Compation/xiaotiao/SpringBoot/src/main/resources/application.properties)：
+Spring Boot 默认数据库配置位于 `xiaotiao/SpringBoot/src/main/resources/application.properties`：
 
 ```properties
 spring.datasource.url=jdbc:mysql://localhost:3306/cropdisease?serverTimezone=Asia/Shanghai
@@ -190,24 +189,25 @@ npm install
 npm run dev
 ```
 
-Vite 配置见 [vite.config.ts](/c:/Users/zhangchaowang/Desktop/Compation/xiaotiao/Vue/vite.config.ts)。开发环境下前端会代理：
+Vite 配置见 `xiaotiao/Vue/vite.config.ts`。开发环境下前端会代理：
 
 - `/api` -> `http://localhost:9999`
 - `/flask` -> `http://localhost:5000`
 
 前端端口由 `VITE_PORT` 控制；如果未额外配置，通常为 Vite 默认端口。
 
-## 环境变量建议
+## 环境变量配置
 
-前端中使用到了智谱 GLM 接口，建议在 `xiaotiao/Vue` 下配置 `.env.development`：
+前端中使用了智谱 GLM 接口，复制 `.env.example` 为 `.env` 并填写实际值：
 
-```env
-VITE_PORT=5173
-VITE_OPEN=true
-VITE_PUBLIC_PATH=/
-VITE_GLM_API_URL=https://open.bigmodel.cn/api/paas/v4/chat/completions
-VITE_GLM_API_KEY=your_api_key
+```bash
+cp xiaotiao/Vue/.env.example xiaotiao/Vue/.env
 ```
+
+必填配置项：
+
+- `VITE_GLM_API_KEY`：智谱 GLM API Key（智能助手依赖）
+- `VITE_API_URL`：后端接口地址
 
 说明：
 
@@ -259,14 +259,12 @@ VITE_GLM_API_KEY=your_api_key
 
 ## 当前项目中值得注意的地方
 
-- 仓库里存在部分历史文档编码乱码，建议统一转为 UTF-8
 - 前端和文档中的部分配置存在旧值或占位值，需要按实际部署环境清理
 - 天气接口和大模型调用中有硬编码配置，公开仓库前建议改为环境变量
 - 视频识别依赖本地 `ffmpeg` 和模型权重文件，若缺失会影响完整运行
-- 根目录当前有一个异常命名的未跟踪文件，提交前建议确认是否保留
 
 ## License
 
-前端子项目 `xiaotiao/Vue` 内包含 `LICENSE` 文件；仓库根目录还包含 [NOTICE.md](/c:/Users/zhangchaowang/Desktop/Compation/NOTICE.md) 与 [THIRD_PARTY_NOTICES.md](/c:/Users/zhangchaowang/Desktop/Compation/THIRD_PARTY_NOTICES.md)。
+前端子项目 `xiaotiao/Vue` 内包含 `LICENSE` 文件。
 
 如需对外开源，建议在仓库根目录补一份统一的许可证说明。

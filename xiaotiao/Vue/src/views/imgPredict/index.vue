@@ -310,7 +310,7 @@ const getAISuggestion = async () => {
 	
 	aiStore.imgPredict.suggestionLoading = true;
 	try {
-		const apiKey = '334ca8db8ede46d9bc1f73d58aa968fc.r9gdj8k3GW8u9CR4';
+		const apiKey = import.meta.env.VITE_GLM_API_KEY || '';
 		
 		const prompt = `作为一个专业的农作物病害专家，请对以下情况进行详细分析：
 
